@@ -1,0 +1,39 @@
+# Dependencies and output
+node_modules/
+dist/
+dist-electron/
+release/
+coverage/
+*.log
+*.tmp
+*.staging-*
+
+# Private work, upstream copies and runtime payloads
+.superpowers/
+imports/
+upstream/
+runtimes/
+instances/
+hub-data/
+hub-archives/
+backups/
+logs/
+shared/skills/
+shared/plugins/
+web-instance-e2e/
+_archive/
+.tmp-pnpm-probe/
+.diag-instance/
+scripts/backup-dsh-home.ps1
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.pfx
+*.p12
+.DS_Store
+Thumbs.db
