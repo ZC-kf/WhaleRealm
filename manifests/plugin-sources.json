@@ -1,0 +1,30 @@
+﻿{
+    "schema":  "dsh-hub.plugin-sources.v1",
+    "generatedAt":  "2026-09-23T14:37:55.5091999Z",
+    "note":  "Pinned plugin artifacts staged inside the Hub so instances never depend on C:\\Users\\Lenovo\\.dsh or on network availability at launch time.",
+    "plugins":  [
+                    {
+                        "name":  "dsh-plugin-cyber",
+                        "version":  "0.3.0",
+                        "kind":  "directory",
+                        "stagedAt":  "D:\\Dsh-Hub-HIDM\\shared\\plugins\\dsh-plugin-cyber",
+                        "origin":  "C:\\Users\\Lenovo\\.dsh\\vendor\\dsh-plugin-cyber (copied read-only; source left untouched)",
+                        "files":  4507,
+                        "dependencies":  "none",
+                        "peerDependencies":  "@deepseek-ai/cordis, dsh-home-paths, dsh-skill-filesystem, dsh-tools, schemastery"
+                    },
+                    {
+                        "name":  "dsh-layered-memory",
+                        "version":  "0.9.2",
+                        "kind":  "tarball",
+                        "stagedAt":  "D:\\Dsh-Hub-HIDM\\shared\\plugins\\dsh-layered-memory-0.9.2.tgz",
+                        "origin":  "https://registry.npmmirror.com/dsh-layered-memory/-/dsh-layered-memory-0.9.2.tgz",
+                        "registrySha1":  "57ae2ef8f926b9b44c820a3a2c61df246e6ff5df",
+                        "sha1":  "57ae2ef8f926b9b44c820a3a2c61df246e6ff5df",
+                        "sha256":  "cd90926a6fc6aa2956199ba817923efad548294918a2dffe069e855d30085dc4",
+                        "bytes":  5340931,
+                        "dependencies":  "@deepseek-ai/schemastery@3.18.2, @node-rs/jieba@^2.0.2, sqlite-vec@^0.1.7-alpha.2, undici@^7.29.0",
+                        "peerDependencies":  "8 x @deepseek-ai/* provided by the runtime (autoInstallPeers=false)"
+                    }
+                ]
+}

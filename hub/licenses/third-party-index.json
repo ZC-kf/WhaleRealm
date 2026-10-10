@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": {
+    "lock": "hub/package-lock.json",
+    "installedTree": "hub/node_modules",
+    "electronDist": "hub/release/win-unpacked"
+  },
+  "project": {
+    "name": "dsh-desktop-hub",
+    "version": "1.0.0",
+    "license": "GPL-3.0-or-later",
+    "licenseFile": "licenses/GPL-3.0.txt",
+    "licenseSha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+  },
+  "packagedNpm": [
+    {
+      "name": "react",
+      "version": "19.3.0",
+      "license": "MIT",
+      "featherAttribution": null,
+      "source": "https://registry.npmjs.org/react/-/react-19.3.0.tgz",
+      "integrity": "sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog==",
+      "textFile": "licenses/npm/react@19.3.0/LICENSE",
+      "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+    },
+    {
+      "name": "react-dom",
+      "version": "19.3.0",
+      "license": "MIT",
+      "featherAttribution": null,
+      "source": "https://registry.npmjs.org/react-dom/-/react-dom-19.3.0.tgz",
+      "integrity": "sha512-JDk8dgif51OjFoDE70+OT9ICyYr+69HlmihNwp1+Nsfbna3t5sIiCa9ZJktDmQ4/1b/rn26hIAR2uYXDMr5r0Q==",
+      "textFile": "licenses/npm/react-dom@19.3.0/LICENSE",
+      "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+    },
+    {
+      "name": "scheduler",
+      "version": "0.28.0",
+      "license": "MIT",
+      "featherAttribution": null,
+      "source": "https://registry.npmjs.org/scheduler/-/scheduler-0.28.0.tgz",
+      "integrity": "sha512-juorfCmIkIw8tT+p5BXSm6PJjQF/ycEYmKyzURCIt/RaZIhL+PulbQ9Yu2z1HdOJDdqDTlxA1+xKBmHXJsczAw==",
+      "textFile": "licenses/npm/scheduler@0.28.0/LICENSE",
+      "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+    },
+    {
+      "name": "lucide-react",
+      "version": "1.47.0",
+      "license": "ISC",
+      "featherAttribution": "完整 LICENSE 同时包含 Feather 派生图标的 MIT 归属（Cole Bemis 等），随全文一并列出，不得仅按 ISC 摘要。",
+      "source": "https://registry.npmjs.org/lucide-react/-/lucide-react-1.47.0.tgz",
+      "integrity": "sha512-o8C23aXpNQypRY73W7fW02EyvWJinEMXgKeGjFoKym0zj3Q73hD97A1IQps1g8C14HTGsOpZL0Am+xjfgFZAbg==",
+      "textFile": "licenses/npm/lucide-react@1.47.0/LICENSE",
+      "sha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57"
+    },
+    {
+      "name": "yaml",
+      "version": "2.9.1",
+      "license": "ISC",
+      "featherAttribution": null,
+      "source": "https://registry.npmjs.org/yaml/-/yaml-2.9.1.tgz",
+      "integrity": "sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==",
+      "textFile": "licenses/npm/yaml@2.9.1/LICENSE",
+      "sha256": "5bba27375d93e9119f76c1015f7672cf9ad5f70952296e0842fb2243d6376869"
+    }
+  ],
+  "electronDist": {
+    "version": "43.7.3",
+    "licenseFile": "release/win-unpacked/LICENSE.electron.txt",
+    "licenseSha256": "5154e165bd6c2cc0cfbcd8916498c7abab0497923bafcd5cb07673fe8480087d",
+    "chromiumNoticesFile": "release/win-unpacked/LICENSES.chromium.html",
+    "chromiumSha256": "c971fa90cb787337e9df73773f3b43cd5621f035e53cded439bd927b3b759e0c"
+  }
+}

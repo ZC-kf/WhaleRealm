@@ -1,0 +1,27 @@
+node_modules/
+dist/
+dist-electron/
+release/
+release-v*/
+release-r*/
+*.log
+.env
+.env.local
+
+# 大型本地验收样本（真实整合包 1.3GB），不进版本库；tests/_probe_real_scan.test.ts 按其存在与否自动跳过。
+/整合包(1).zip
+
+# 会话/开发产物与旧上游残留，不进开源版本库
+# 注意：docs/ 现已作为「设置-关于-项目文档」的内置多语言手册入库（随包分发），不要重新加入忽略。
+website/
+catalog/
+bin/
+.github/
+CONTEXT.md
+DSH-LAUNCHER-REPOSITORY-REPORT.md
+rm-temp.cjs
+shadow-burst.cjs
+START-DSH-LAUNCHER.cmd
+launcher-background.png
+README.en.md
+CHANGELOG.md

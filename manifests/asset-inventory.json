@@ -1,0 +1,87 @@
+﻿{
+    "schema":  "dsh-hub.asset-inventory.v1",
+    "generatedAt":  "2026-09-22T08:00:26.1560683Z",
+    "root":  "D:",
+    "items":  [
+                  {
+                      "relativePath":  "deepseek-harness",
+                      "path":  "D:\\deepseek-harness",
+                      "kind":  "source",
+                      "exists":  true,
+                      "lastWriteTime":  "2026-09-08T10:26:54.4941485Z",
+                      "fileCount":  16427,
+                      "bytes":  141396707,
+                      "latestWriteTime":  "2026-09-04T15:47:54.7714326Z"
+                  },
+                  {
+                      "relativePath":  "DSH-Desktop-source-audit",
+                      "path":  "D:\\DSH-Desktop-source-audit",
+                      "kind":  "source-audit",
+                      "exists":  true,
+                      "lastWriteTime":  "2026-09-04T16:14:26.1408761Z",
+                      "fileCount":  8287,
+                      "bytes":  55558233,
+                      "latestWriteTime":  "2026-09-04T16:14:26.1428830Z"
+                  },
+                  {
+                      "relativePath":  "DSH-Desktop",
+                      "path":  "D:\\DSH-Desktop",
+                      "kind":  "runtime",
+                      "exists":  true,
+                      "lastWriteTime":  "2026-09-04T16:28:40.5500273Z",
+                      "fileCount":  406,
+                      "bytes":  378070820,
+                      "latestWriteTime":  "2026-09-08T19:30:06.6648709Z"
+                  },
+                  {
+                      "relativePath":  "deepseek-harness-desktop",
+                      "path":  "D:\\deepseek-harness-desktop",
+                      "kind":  "runtime",
+                      "exists":  true,
+                      "lastWriteTime":  "2026-09-04T16:02:13.7514828Z",
+                      "fileCount":  52,
+                      "bytes":  402616737,
+                      "latestWriteTime":  "2026-09-04T16:00:02.0264124Z"
+                  },
+                  {
+                      "relativePath":  "dsh-browser",
+                      "path":  "D:\\dsh-browser",
+                      "kind":  "related-source",
+                      "exists":  true,
+                      "lastWriteTime":  "2026-09-09T05:00:53.8359691Z",
+                      "fileCount":  243,
+                      "bytes":  3463306,
+                      "latestWriteTime":  "2026-09-09T05:05:24.6228597Z"
+                  },
+                  {
+                      "relativePath":  "dsh-browser-backups",
+                      "path":  "D:\\dsh-browser-backups",
+                      "kind":  "backup",
+                      "exists":  true,
+                      "lastWriteTime":  "2026-09-09T04:59:26.5268852Z",
+                      "fileCount":  16,
+                      "bytes":  892600,
+                      "latestWriteTime":  "2026-09-08T19:36:45.7225950Z"
+                  },
+                  {
+                      "relativePath":  "dsh-browser-baseline-652cca",
+                      "path":  "D:\\dsh-browser-baseline-652cca",
+                      "kind":  "backup",
+                      "exists":  true,
+                      "lastWriteTime":  "2026-09-09T05:04:33.0194640Z",
+                      "fileCount":  237,
+                      "bytes":  3434185,
+                      "latestWriteTime":  "2026-09-09T05:04:35.8682744Z"
+                  },
+                  {
+                      "relativePath":  "dsh-worktable",
+                      "path":  "D:\\dsh-worktable",
+                      "kind":  "artifact",
+                      "exists":  true,
+                      "lastWriteTime":  "2026-09-04T16:08:55.3997604Z",
+                      "fileCount":  1,
+                      "bytes":  453012,
+                      "latestWriteTime":  "2026-09-04T16:08:56.2693617Z"
+                  }
+              ]
+}

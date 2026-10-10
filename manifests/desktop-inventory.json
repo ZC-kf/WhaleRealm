@@ -1,0 +1,123 @@
+{
+  "schema": "dsh-hub.desktop-inventory.v1",
+  "generatedAt": "2026-09-23T20:35:00+08:00",
+  "purpose": "Authoritative catalogue of every DeepSeek Harness desktop distribution found on this machine, with an explicit verdict on whether it can be run as an isolated Hub-managed instance.",
+  "scanScope": "D:\\ recursive to depth 5 for 'DeepSeek Harness.exe' and 'app.asar'; C:\\ LocalAppData\\Programs, Program Files, Program Files (x86), LocalAppData for DeepSeek/DSH directories",
+  "isolationRule": "A distribution may be registered as a launchable Hub instance ONLY if it honours DSH_DESKTOP_USER_DATA and DSH_DESKTOP_PORT. Without them an instance falls back to the shared %APPDATA% Electron userData, the shared C:\\Users\\Lenovo\\.dsh home and the default port, which is exactly the cross-instance interference this Hub exists to prevent. Such distributions are catalogued and archived, never launched.",
+  "archiveRelocation": {
+    "note": "On 2026-09-23 the scattered D-drive assets were MOVED (not copied) into the Hub archive. Every 'path', 'executable', 'bundledArchive' and nonDesktopDshAssets path elsewhere in this file is the PRE-ARCHIVE original and must be resolved through this map. Historical manifests (asset-inventory.json, migration.json, source-lock.json) are deliberately left frozen as evidence of the state at the time they were written.",
+    "movedAt": "2026-09-23T13:45:00Z",
+    "recordFile": "manifests/archive-moves.txt",
+    "rollback": "scripts/archive-dsh-assets.ps1 -Rollback",
+    "verified": "every move was verified by file count, total bytes and executable SHA-256 before/after",
+    "map": {
+      "D:\\deepseek-harness": "D:\\Dsh-Hub-HIDM\\_archive\\deepseek-harness",
+      "D:\\deepseek-harness-desktop": "D:\\Dsh-Hub-HIDM\\_archive\\deepseek-harness-desktop",
+      "D:\\DSH-Desktop-source-audit": "D:\\Dsh-Hub-HIDM\\_archive\\DSH-Desktop-source-audit",
+      "D:\\dsh-browser": "D:\\Dsh-Hub-HIDM\\_archive\\dsh-browser",
+      "D:\\dsh-browser-backups": "D:\\Dsh-Hub-HIDM\\_archive\\dsh-browser-backups",
+      "D:\\dsh-browser-baseline-652cca": "D:\\Dsh-Hub-HIDM\\_archive\\dsh-browser-baseline-652cca",
+      "D:\\dsh-worktable": "D:\\Dsh-Hub-HIDM\\_archive\\dsh-worktable"
+    },
+    "notMoved": {
+      "D:\\DSH-Desktop": "still in place; it hosts the live instance and this agent session. Gated behind -AllowLiveDesktop plus a free port 3080.",
+      "D:\\DeepSeekWorkSave": "out of scope, untouched",
+      "C:\\Users\\Lenovo\\.dsh": "live DSH_HOME, read-only source, never moved"
+    }
+  },
+  "distributions": [
+    {
+      "id": "live-downstream-fork",
+      "path": "D:\\DSH-Desktop",
+      "executable": "D:\\DSH-Desktop\\DeepSeek Harness.exe",
+      "executableSha256": "306176a02aba55ced362ed81fcdb68e58f663709f2a8ecb33de53640c6f7d38c",
+      "executableBytes": 225585664,
+      "fileVersion": "0.1.2-beta.2",
+      "productName": "DeepSeek Harness",
+      "appPackageName": "deepseek-harness-desktop",
+      "appPackageVersion": "0.1.2-beta.2",
+      "updater": { "owner": "cherrchen", "repo": "deepseek-harness-electron", "provider": "github" },
+      "lineage": "downstream community fork, not deepseek-ai official",
+      "sizeMb": 567.5,
+      "files": 21671,
+      "state": {
+        "running": true,
+        "listenPort": 3080,
+        "ownerPid": 38308,
+        "dshHome": "C:\\Users\\Lenovo\\.dsh",
+        "electronUserData": "C:\\Users\\Lenovo\\AppData\\Roaming\\DeepSeek Harness",
+        "note": "This process hosts the current agent session. It was never stopped, moved or modified."
+      },
+      "isolatable": false,
+      "isolatableReason": "Predates the instance patches; does not read DSH_DESKTOP_USER_DATA or DSH_DESKTOP_PORT.",
+      "hubDisposition": "catalogued and copy-first archived into imports\\DSH-Desktop; must not be registered as a launchable instance and must not be moved while running"
+    },
+    {
+      "id": "rc12-sdkwork",
+      "path": "D:\\deepseek-harness-desktop",
+      "executable": "D:\\deepseek-harness-desktop\\dsh-desktop.exe",
+      "executableSha256": "b441b3f84c0096bb2c690e3cc8ed8e53f55b0c33db1a966c62a69b8ad9c6a89f",
+      "executableBytes": 201248768,
+      "fileVersion": "0.1.0-rc.12",
+      "productName": "DeepSeek Harness",
+      "appPackageName": "@deepseek-ai/dsh-desktop",
+      "appPackageVersion": "0.1.0-rc.12",
+      "updater": { "owner": "sdkwork-ai", "repo": "deepseek-harness-desktop", "provider": "github" },
+      "lineage": "official package name but updater re-pointed to sdkwork-ai; treated as non-official",
+      "bundledArchive": "D:\\deepseek-harness-desktop\\DeepSeek-Harness-0.1.0-rc.12-win-x64.zip",
+      "sizeMb": 497.8,
+      "files": 13125,
+      "state": { "running": false },
+      "isolatable": false,
+      "isolatableReason": "Predates the instance patches; does not read DSH_DESKTOP_USER_DATA or DSH_DESKTOP_PORT. Its executable is also named dsh-desktop.exe, not the name the Hub runner adapter expects.",
+      "hubDisposition": "catalogued and copy-first archived into imports\\deepseek-harness-desktop; not launchable through the Hub"
+    },
+    {
+      "id": "official-0.1.7-alpha.1",
+      "path": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1",
+      "executable": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1\\DeepSeek Harness.exe",
+      "executableSha256": "7c484b12eb490b74cad478b68bd4a057b91de376a6b470465f9679f9472f2453",
+      "executableBytes": 244465152,
+      "fileVersion": "0.1.7-alpha.1",
+      "productName": "DeepSeek Harness",
+      "source": {
+        "repository": "https://github.com/deepseek-ai/deepseek-harness",
+        "commit": "c36a83ff6bb95e3f82cf79f9be7c724270a8aa61",
+        "version": "0.1.7-alpha.1",
+        "builtLocally": true,
+        "unsigned": true,
+        "patchRecord": "manifests/runner-patches.json"
+      },
+      "electron": "44.0.0",
+      "bundledNode": "24.18.1",
+      "bundledPnpm": "11.7.0",
+      "sizeMb": 1141.8,
+      "files": 10337,
+      "state": { "running": false },
+      "isolatable": true,
+      "isolatableEvidence": "Two instances ran in parallel with distinct DSH_HOME, Electron userData, profiles\\desktop, workspace, logs, ports 19401/19402 and lock names; verify-instance-isolation.ps1 exited 0 against live state; the shared runtime directory recorded 0 modified files during those runs.",
+      "hubDisposition": "the only distribution registered as a launchable runtimeRoot; backs every Hub-managed instance"
+    }
+  ],
+  "cDriveState": {
+    "dshHome": "C:\\Users\\Lenovo\\.dsh",
+    "belongsTo": "live-downstream-fork",
+    "contents": ["backup-before-plugins", "dsh-plugin-cyber", "electron", "memory", "profiles", "sessions", "skills", "storages", "vendor", ".anonymous-user-id", ".credentials.yaml", "ext-bridge-token", "settings.yaml"],
+    "measuredMb": { "skills": 59.2, "profiles": 79.5, "vendor": 249.8, "memory": 1286.5, "sessions": 62.1, "storages": 0.4, "dsh-plugin-cyber": 1.5 },
+    "policy": "Read-only source. Never moved, never deleted, never written by Hub instances. User asked to organise the D drive only."
+  },
+  "nonDesktopDshAssets": [
+    { "path": "D:\\deepseek-harness", "role": "older official CLI/Web source (0.1.3-alpha.1), no apps/desktop", "sizeMb": 1604.1 },
+    { "path": "D:\\DSH-Desktop-source-audit", "role": "downstream Electron source audit tree", "sizeMb": 72.5 },
+    { "path": "D:\\dsh-browser", "role": "separate browser project, not a desktop runtime", "sizeMb": 352.9 },
+    { "path": "D:\\dsh-browser-backups", "role": "backup", "sizeMb": 0.9 },
+    { "path": "D:\\dsh-browser-baseline-652cca", "role": "baseline backup", "sizeMb": 355.6 },
+    { "path": "D:\\dsh-worktable", "role": "artifact (single tgz)", "sizeMb": 0.4 }
+  ],
+  "sharedSurfacesNotIsolated": [
+    { "surface": "HKCU\\Software\\Classes\\dsh", "detail": "dsh:// deep-link protocol handler is per-user and shared by every distribution; the last registration wins." },
+    { "surface": "%LOCALAPPDATA%\\deepseek-harness-desktop-updater", "detail": "auto-updater cache shared by the fork and any distribution using the same updaterCacheDirName." },
+    { "surface": "%LOCALAPPDATA%\\electron", "detail": "Electron download cache, shared and write-once." },
+    { "surface": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1", "detail": "one read-only runtime shared by all Hub instances. Measured 0 writes during instance runs, but there is no ACL enforcing it; an applied auto-update would affect every instance at once." }
+  ]
+}

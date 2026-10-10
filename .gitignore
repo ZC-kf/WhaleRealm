@@ -1,39 +1,34 @@
-# Dependencies and output
 node_modules/
-dist/
-dist-electron/
 release/
-coverage/
 *.log
 *.tmp
 *.staging-*
-
-# Private work, upstream copies and runtime payloads
-.superpowers/
+.superpowers/sdd/
 imports/
 upstream/
+# Hub source is tracked; build artifacts are ignored by hub/.gitignore
+# (node_modules/, dist/, dist-electron/, release/, *.log, .env).
+hub-archives/
 runtimes/
 instances/
 hub-data/
-hub-archives/
-backups/
-logs/
+# The shared Skill library is a staged copy of the user's real library
+# (C:\Users\Lenovo\.dsh\skills): reproducible, 59 MB / ~9000 files, not source.
 shared/skills/
-shared/plugins/
-web-instance-e2e/
-_archive/
+logs/
 .tmp-pnpm-probe/
 .diag-instance/
-scripts/backup-dsh-home.ps1
+_archive/
+shared/plugins/
 
-# Local configuration and secrets
-.env
-.env.*
-!.env.example
-!.env.*.example
-*.pem
-*.key
-*.pfx
-*.p12
-.DS_Store
-Thumbs.db
+# 本地备份归档：git bundle + 源码副本（跨版本恢复用）
+backups/
+
+# 新建实例端到端验证产物（用户目录真实运行 node/node_modules，不入库）
+web-instance-e2e/
+
+# 本地工具状态与游离产物（永不入库）
+.workbuddy/
+Microsoft/
+libpiped_test.rlib
+scripts/backup-dsh-home.ps1

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "runtimes": [
+    {
+      "schemaVersion": 1,
+      "kind": "community-desktop",
+      "version": "0.21.0",
+      "adapterId": "community-desktop-v1",
+      "sourceRef": "aff39a991fda3558c5459b54fb3fa1c6984d3227",
+      "patchSha256": "fe26651c76f60255ce88d1f867412cd2a0d313afa7be320bd16bb7c855f9cc7f",
+      "executable": "deepseek-harness-desktop.exe",
+      "assetId": "community-desktop:0.21.0:fe26651c76f6",
+      "integrity": "sha512-+2FYw+mQY32fb0+kJxuVcPXJdHzrT+H4hThG1ePDX5Hy68H3/L9Q6aQrZt/fbFT0zrNLvqXqCTHFsbIKBRGt0g==",
+      "format": "zip",
+      "url": "file:///D:/Dsh-Hub-HIDM/imports/isolation-build/community-managed-build-r3/community-desktop-0.21.0-win-x64.zip",
+      "receiptSha256": "0bf9bf397a1576d53ddf04b44c8529897821fecf6ac4cce73f4bfee3ec7ddd67",
+      "status": "certified",
+      "acceptance": {
+        "evidenceSha256": "0f2872a05e786ae62c6451d38d99fc9a07513c0cd9dde03ceee4a355a1e22bfb",
+        "acceptedAt": "2026-10-10T08:04:27.769Z",
+        "checks": {
+          "twoInstances": true,
+          "privateData": true,
+          "privateWebviews": true,
+          "distinctPorts": true,
+          "independentLocks": true,
+          "ownedProcessTree": true,
+          "stopIsolation": true,
+          "noGlobalRegistration": true,
+          "protectedPathsUnchanged": true,
+          "completeResources": true,
+          "coldLaunchWithoutBuildTools": true
+        }
+      }
+    }
+  ]
+}

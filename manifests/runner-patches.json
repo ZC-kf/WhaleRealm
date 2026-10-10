@@ -1,0 +1,49 @@
+{
+  "schema": "dsh-hub.runner-patches.v1",
+  "purpose": "Every modification made to the pinned official source tree while producing the local unsigned runner. The upstream directory was extracted from a GitHub API tarball and has no git metadata, so this manifest is the authoritative change record.",
+  "officialCommit": "c36a83ff6bb95e3f82cf79f9be7c724270a8aa61",
+  "officialVersion": "0.1.7-alpha.1",
+  "upstreamRoot": "D:\\Dsh-Hub-HIDM\\upstream\\deepseek-harness",
+  "patches": [
+    {
+      "id": "instance-user-data",
+      "file": "apps/desktop/src/main.ts",
+      "kind": "instance-isolation",
+      "summary": "applyInstanceUserData() reads DSH_DESKTOP_USER_DATA (absolute path required) and calls app.setPath('userData', resolve(...)) before claimDesktopSingleInstance, so each Hub instance owns a distinct Electron userData root and therefore a distinct single-instance lock.",
+      "planned": true
+    },
+    {
+      "id": "instance-desktop-port",
+      "file": "apps/desktop-host/src/index.ts",
+      "kind": "instance-isolation",
+      "summary": "desktopPort() reads DSH_DESKTOP_PORT (default 19387, validates integer 1..65535) and the host is started with --no-open --port <port>, so each Hub instance binds its own loopback port.",
+      "planned": true
+    },
+    {
+      "id": "local-package-environment",
+      "file": "apps/desktop/.env.windows",
+      "kind": "local-build-config",
+      "summary": "Non-secret localhost build metadata required by the official packaging environment loader (app id, test deployment, localhost policy/download origins, random 32-hex test release id, signature cache concurrency 1). Contains no signing or upload credentials.",
+      "planned": false
+    },
+    {
+      "id": "declare-cordis-production-dependency",
+      "file": "apps/desktop/package.json",
+      "kind": "packaging-correctness",
+      "summary": "Add @deepseek-ai/cordis (workspace:^) to dependencies.",
+      "planned": false,
+      "reason": "Upstream packaging gap: @deepseek-ai/dsh-typert-protocol/lib/index.js imports '@deepseek-ai/cordis' but packages/typert/protocol/package.json declares only @deepseek-ai/dsh-brand as a production dependency (cordis is linked in the monorepo outside production scope). electron-builder collects production dependencies only, so the packaged app.asar/node_modules contained 7 @deepseek-ai packages including dsh-brand and cosmokit but not cordis. The Electron main process then aborts at startup with ERR_MODULE_NOT_FOUND: Cannot find package '@deepseek-ai/cordis', surfaced as a native 'Error' dialog reading 'A JavaScript error occurred in the main process'. ESM resolution ignores NODE_PATH, so the package must be inside app.asar/node_modules.",
+      "evidence": "UI Automation read of the runner's startup error dialog; asar listing of runtimes/0.1.7-alpha.1/resources/app.asar",
+      "reversible": "Remove the single dependencies entry and rebuild."
+    },
+    {
+      "id": "lockfile-sync-for-cordis",
+      "file": "pnpm-lock.yaml",
+      "kind": "packaging-correctness",
+      "summary": "Lockfile updated by 'pnpm install --filter @deepseek-ai/dsh-desktop --no-frozen-lockfile' (+1 package) so the workspace link apps/desktop/node_modules/@deepseek-ai/cordis -> vendor/cordis exists and electron-builder can collect it.",
+      "planned": false,
+      "reason": "CI=1 makes frozen-lockfile the default, so the dependency addition was rejected with ERR_PNPM_OUTDATED_LOCKFILE until the lockfile was synced.",
+      "reversible": "Restore the pinned tarball's original pnpm-lock.yaml and remove the dependencies entry."
+    }
+  ]
+}

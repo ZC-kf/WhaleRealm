@@ -1,0 +1,74 @@
+{
+  "schema": "dsh-hub.plugin-compatibility.v1",
+  "generatedAt": "2026-09-23T14:50:00Z",
+  "runtime": {
+    "distribution": "official deepseek-ai/deepseek-harness built locally",
+    "version": "0.1.7-alpha.1",
+    "runnerSha256": "7c484b12eb490b74cad478b68bd4a057b91de376a6b470465f9679f9472f2453",
+    "electron": "44.0.0",
+    "bundledNode": "24.18.1"
+  },
+  "verdicts": [
+    {
+      "plugin": "dsh-plugin-cyber",
+      "version": "0.3.0",
+      "sourceKind": "directory",
+      "pinnedAt": "D:\\Dsh-Hub-HIDM\\shared\\plugins\\dsh-plugin-cyber",
+      "origin": "C:\\Users\\Lenovo\\.dsh\\vendor\\dsh-plugin-cyber (copied read-only, source untouched)",
+      "dependencies": "none",
+      "status": "COMPATIBLE",
+      "installedOn": ["gui-a", "sandbox", "daily"],
+      "mountEvidence": "Each instance wrote its own hash-chained audit entry at <instance>\\dsh-home\\dsh-plugin-cyber\\default\\audit.jsonl with \"event\":\"plugin.load\" and dataDir inside that instance. Chains are independent (each starts at prevHash GENESIS): gui-a hash 531314b8787976c013c4a73f06b7eb7156d5892868cd60d0c3d571f0571342c2, daily first hash 90102746bea8a1f0ddafc2e6adc6c48dfd6d35b09d8eb94ca8c48208a8966131 then 92c01b2d3ff21556edc29684e8a1c62244e4f6eedd722ef43be89020538d8efb with prevHash pointing at the first.",
+      "independenceEvidence": "node_modules\\dsh-plugin-cyber resolves inside the instance in all three cases (real directory for gui-a and daily, Junction whose target is that instance's own profile .pnpm store for sandbox). install-instance-plugin.ps1 fails closed if the resolved target points at shared\\plugins or the user profile.",
+      "offline": true,
+      "installSeconds": "6-13"
+    },
+    {
+      "plugin": "dsh-layered-memory",
+      "version": "0.9.2",
+      "sourceKind": "tarball",
+      "pinnedAt": "D:\\Dsh-Hub-HIDM\\shared\\plugins\\dsh-layered-memory-0.9.2.tgz",
+      "origin": "https://registry.npmmirror.com/dsh-layered-memory/-/dsh-layered-memory-0.9.2.tgz",
+      "registrySha1": "57ae2ef8f926b9b44c820a3a2c61df246e6ff5df",
+      "sha1Verified": true,
+      "sha256": "cd90926a6fc6aa2956199ba817923efad548294918a2dffe069e855d30085dc4",
+      "bytes": 5340931,
+      "dependencies": "@deepseek-ai/schemastery@3.18.2, @node-rs/jieba@^2.0.2, sqlite-vec@^0.1.7-alpha.2, undici@^7.29.0",
+      "peerDependencies": "8 x @deepseek-ai/* at ^0.1.2-alpha.1",
+      "status": "INCOMPATIBLE",
+      "installedOn": [],
+      "summary": "Installs cleanly and its own plugin code loads, but it breaks the official Desktop boot. Rolled back; not deployed to any instance.",
+      "whatWorked": [
+        "pnpm install succeeded offline-from-cache in 12.8s; all native deps landed as real directories inside the instance (@node-rs/jieba, sqlite-vec, undici, @deepseek-ai/schemastery)",
+        "@node-rs/jieba loaded fine, so there is no Electron/N-API ABI problem",
+        "the plugin initialised and wrote <instance>\\dsh-home\\memory\\ with memory.db (118784 bytes), conversations/, records/, scenes/chat, scenes/work and memory.log",
+        "memory.log records: tokenizer = jieba word-level + CJK bigram union; retrieval fell back from hybrid to keyword FTS5 BM25 because embedding is disabled; distillation route deepseek-official/deepseek-flash; tools registered memory_search / conversation_search / memory_read_scene; 'L0~L3 layered distillation memory plugin ready'",
+        "dataDir resolved to $DSH_HOME/memory inside the instance, confirming the per-instance isolation model would hold if it booted"
+      ],
+      "failure": {
+        "observedWindowTitle": "DeepSeek Harness is unavailable",
+        "managedProcesses": 4,
+        "hostPortListening": false,
+        "logBytes": 2102,
+        "decisiveErrors": [
+          "Error invoking remote method 'dsh-desktop:boot': Error: cannot create effect on inactive context",
+          "Error: Desktop renderer exited: crashed",
+          "Network service crashed or was terminated, restarting service",
+          "GPU process exited unexpectedly: exit_code=-1"
+        ],
+        "earlierWarning": "[warn] [memory] memory-mode switch registration failed (keeping all on): settings.register is not a function"
+      },
+      "rootCause": "Version skew. dsh-layered-memory 0.9.2 targets the 0.1.2-alpha.x host API surface (its peerDependencies all say ^0.1.2-alpha.1). On 0.1.7-alpha.1 the settings service no longer exposes register(), and something in the plugin's composition runs against a Cordis context that has already been deactivated, so the desktop boot effect fails and the renderer crashes.",
+      "abEvidence": "Same instance (daily), same credentials, same runner. With cyber + layered-memory: 4 processes, title 'DeepSeek Harness is unavailable', port 19411 not listening, 2102-byte error log. After restoring package.json.pre-dsh-layered-memory (cyber only): 6 processes, title 'DeepSeek Harness', port 19411 listening, 0-byte log.",
+      "classification": "upstream incompatibility, not a Hub defect",
+      "options": [
+        "do not install it on Desktop instances (current state)",
+        "obtain or build a dsh-layered-memory release whose peerDependencies match 0.1.7-alpha.1",
+        "keep using it on the live downstream fork D:\\DSH-Desktop (0.1.2-beta.2), where it is known to work"
+      ],
+      "residue": "instances\\daily\\dsh-home\\memory\\ remains from the trial run. It is inert because the bundle is no longer registered; delete it only if you want the instance pristine."
+    }
+  ],
+  "correctionToEarlierClaim": "During the credential A/B I reported '0-byte log = no errors' for a run that later showed 1736 bytes containing 'dsh desktop host exited with 4294967295'. Those lines were written AFTER my observation window, and the same signature appears in logs of runs I deliberately stopped via manifests\\launch-one-stop.flag. So 'host exited with 4294967295' is largely an artifact of my own stop path and must not be read as a spontaneous failure. The credential conclusion is unaffected because it rested on live process count and window visibility, not on the log.",
+  "toolingDefectFixed": "install-instance-plugin.ps1 originally rewrote package.json from a fixed template, which would have silently dropped every previously registered plugin - installing a second plugin wiped the first. It now merges, and asserts after writing that every previously declared bundle survived. Verified: daily went from deps=[dsh-plugin-cyber] to deps=[dsh-plugin-cyber, dsh-layered-memory] with all four bundles intact."
+}

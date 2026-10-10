@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "document": "WhaleRealm（鲸域）分发组件来源与许可清单",
+  "generatedBy": "Task8 批2a — scripts/generate-third-party-notices.mjs（许可文本事实源）+ 本清单（来源事实源）",
+  "notes": [
+    "字段结构按 license-research.md『Practical release manifest and provenance options』提议：component name/version、origin repo/commit 或 resolved URL/integrity、source/bundled/external-download 分类、license/notice 路径与 SHA-256、patch digest、provenance status 与证据。",
+    "本清单只记录事实，不作出法律结论；『未验证』的 provenance status 表示证据链尚未闭合，公开发布前必须解决或明确披露。",
+    "依赖版本与许可全文的机器可读索引见 hub/licenses/third-party-index.json；--check 校验两者与 package-lock/实际安装一致。"
+  ],
+  "project": {
+    "name": "whalerealm-hub",
+    "productName": "鲸域 · WhaleRealm",
+    "version": "1.0.0",
+    "origin": "本仓自有代码（含 Task8 批1 独立重写的边界模块）",
+    "classification": "source",
+    "license": "GPL-3.0-or-later",
+    "licenseFile": "hub/LICENSE",
+    "licenseTextFile": "hub/licenses/GPL-3.0.txt",
+    "licenseTextSha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "provenance": {
+      "status": "own-authorship",
+      "evidence": "全部生产代码由本仓编写或按行为规格独立重写；license-research.md 37 文件对照表中的继承体已在 Task8 批1 替换/删除（资产 5 项除外，见 unresolvedIssues）。"
+    }
+  },
+  "components": [
+    {
+      "name": "react",
+      "version": "19.3.0",
+      "classification": "bundled",
+      "origin": {
+        "resolvedUrl": "https://registry.npmjs.org/react/-/react-19.3.0.tgz",
+        "integrity": "sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog=="
+      },
+      "license": "MIT",
+      "licenseFile": "hub/licenses/npm/react@19.3.0/LICENSE",
+      "licenseSha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+      "provenance": {
+        "status": "verified",
+        "evidence": "安装包内 LICENSE 全文复制；版本与 package-lock/实际安装/ASAR 三方一致。"
+      }
+    },
+    {
+      "name": "react-dom",
+      "version": "19.3.0",
+      "classification": "bundled",
+      "origin": {
+        "resolvedUrl": "https://registry.npmjs.org/react-dom/-/react-dom-19.3.0.tgz",
+        "integrity": "sha512-JDk8dgif51OjFoDE70+OT9ICyYr+69HlmihNwp1+Nsfbna3t5sIiCa9ZJktDmQ4/1b/rn26hIAR2uYXDMr5r0Q=="
+      },
+      "license": "MIT",
+      "licenseFile": "hub/licenses/npm/react-dom@19.3.0/LICENSE",
+      "licenseSha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+      "provenance": {
+        "status": "verified",
+        "evidence": "同 react@19.3.0。"
+      }
+    },
+    {
+      "name": "scheduler",
+      "version": "0.28.0",
+      "classification": "bundled",
+      "origin": {
+        "resolvedUrl": "https://registry.npmjs.org/scheduler/-/scheduler-0.28.0.tgz",
+        "integrity": "sha512-juorfCmIkIw8tT+p5BXSm6PJjQF/ycEYmKyzURCIt/RaZIhL+PulbQ9Yu2z1HdOJDdqDTlxA1+xKBmHXJsczAw=="
+      },
+      "license": "MIT",
+      "licenseFile": "hub/licenses/npm/scheduler@0.28.0/LICENSE",
+      "licenseSha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+      "provenance": {
+        "status": "verified",
+        "evidence": "react-dom 的传递依赖，随 bundle 分发；版本与实际安装一致。"
+      }
+    },
+    {
+      "name": "lucide-react",
+      "version": "1.47.0",
+      "classification": "bundled",
+      "origin": {
+        "resolvedUrl": "https://registry.npmjs.org/lucide-react/-/lucide-react-1.47.0.tgz",
+        "integrity": "sha512-o8C23aXpNQypRY73W7fW02EyvWJinEMXgKeGjFoKym0zj3Q73hD97A1IQps1g8C14HTGsOpZL0Am+xjfgFZAbg=="
+      },
+      "license": "ISC + Feather 派生图标 MIT 归属",
+      "licenseFile": "hub/licenses/npm/lucide-react@1.47.0/LICENSE",
+      "licenseSha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57",
+      "provenance": {
+        "status": "verified",
+        "evidence": "安装包内完整 LICENSE 含 Feather 派生图标的 MIT 归属段（Copyright (c) 2013-present Cole Bemis）；声明文件显式注明不得仅按 ISC 摘要。"
+      }
+    },
+    {
+      "name": "yaml",
+      "version": "2.9.1",
+      "classification": "bundled",
+      "origin": {
+        "resolvedUrl": "https://registry.npmjs.org/yaml/-/yaml-2.9.1.tgz",
+        "integrity": "sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw=="
+      },
+      "license": "ISC",
+      "licenseFile": "hub/licenses/npm/yaml@2.9.1/LICENSE",
+      "licenseSha256": "5bba27375d93e9119f76c1015f7672cf9ad5f70952296e0842fb2243d6376869",
+      "provenance": {
+        "status": "verified",
+        "evidence": "版本与实际安装一致；LICENSE 全文复制。"
+      }
+    },
+    {
+      "name": "electron",
+      "version": "43.7.3",
+      "classification": "bundled",
+      "origin": {
+        "resolvedUrl": "https://registry.npmjs.org/electron/-/electron-43.7.3.tgz",
+        "integrity": "sha512-I0MQyoe/6QIhQb6QFDUCLIplB8wq/IXR4q2IbOFQXq8AYlHqOAl6OmCknvNLSl4hVBH0bGsx1ypBqE5ns6LjoQ=="
+      },
+      "license": "MIT",
+      "licenseFile": "hub/release/win-unpacked/LICENSE.electron.txt",
+      "licenseSha256": "5154e165bd6c2cc0cfbcd8916498c7abab0497923bafcd5cb07673fe8480087d",
+      "bundledNotices": [
+        {
+          "component": "Chromium（随 Electron 分发）",
+          "noticeFile": "hub/release/win-unpacked/LICENSES.chromium.html",
+          "noticeSha256": "c971fa90cb787337e9df73773f3b43cd5621f035e53cded439bd927b3b759e0c",
+          "note": "20MB 全量第三方许可汇总，随发行体分发，独立可验证。"
+        }
+      ],
+      "provenance": {
+        "status": "verified",
+        "evidence": "Electron 位列 devDependencies 但二进制随包分发，按分发组件对待；两个许可文件与官方发行版一致（大小 1096 / 20313960 字节）。"
+      }
+    },
+    {
+      "name": "official-desktop-runtime",
+      "displayName": "WhaleRealm 官方 Desktop 运行体",
+      "version": "0.1.7-alpha.1",
+      "classification": "external-download",
+      "origin": {
+        "sourceRef": "c36a83ff6bb95e3f82cf79f9be7c724270a8aa61",
+        "patchSha256": "21340348a8d62a65475297fcbcb7be14beebf7d725cb5df9cb113f192a1d671f",
+        "assetId": "official-desktop:0.1.7-alpha.1:21340348a8d6",
+        "artifact": "D:/Dsh-Hub-HIDM/imports/isolation-build/official-managed-build-r6/official-desktop-0.1.7-alpha.1-win-x64.zip",
+        "artifactBytes": 418036337,
+        "integrity": "sha512-v+ErlGoqzMtejGVA2Y3GhEWNzsa1EeAnW2QpG2hwukNN0i6veAW7tqA8R4mTDXTX9Zfv/wmnwSdHxIT37hjVDA==",
+        "receiptSha256": "b5e830cc609be2bcb6860e84fd542671b5c9438d028941bc327408c59b66ef7b"
+      },
+      "license": "DeepSeek Harness MIT（上游）+ 本仓 managed 补丁集（GPL-3.0-or-later，与主程序同许可）",
+      "licenseFile": "imports/isolation-build/official-managed-build-r6/portable/source-notices/LICENSE",
+      "licenseSha256": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+      "copiedSource": {
+        "patchDigest": "21340348a8d62a65475297fcbcb7be14beebf7d725cb5df9cb113f192a1d671f",
+        "patchFiles": [
+          "runtime-sources/official-desktop/patches/files.json（8 条目：回执内文件的补丁清单）",
+          "runtime-sources/official-desktop/patches/managed.patch（unified diff 全文）"
+        ],
+        "note": "对上游源码的全部修改记录在补丁回执（patchSha256 进 build-owner 身份与 runtime-receipt），构建脚本 --kind official-desktop 复现。"
+      },
+      "provenance": {
+        "status": "verified-env-exempt",
+        "evidence": "记录版 r6（zip 全量 CRC 与 13,503 文件逐项校验通过，wr-verify-r6.cjs 20/20）；最终候选 r7（bytes 419632587、integrity sha512-ggORzdTT…、receiptSha256 eeb338e1…）因本机 AI 沙箱父上下文机制无法完成 3 项 HTTP 在线测量——按环境豁免记录（8/11），未认证、创建入口如实不可用；证据与升级路径见 final-validation/certification-summary.json 与 official-r7-probe/。"
+      }
+    },
+    {
+      "name": "community-desktop-runtime",
+      "displayName": "社区 Desktop 运行体（deepseek-harness-desktop）",
+      "version": "0.21.0",
+      "classification": "external-download",
+      "origin": {
+        "sourceRef": "aff39a991fda3558c5459b54fb3fa1c6984d3227",
+        "patchSha256": "fe26651c76f60255ce88d1f867412cd2a0d313afa7be320bd16bb7c855f9cc7f",
+        "assetId": "community-desktop:0.21.0:fe26651c76f6",
+        "artifact": "D:/Dsh-Hub-HIDM/imports/isolation-build/community-managed-build-r3/community-desktop-0.21.0-win-x64.zip",
+        "artifactBytes": 196896167,
+        "integrity": "sha512-+2FYw+mQY32fb0+kJxuVcPXJdHzrT+H4hThG1ePDX5Hy68H3/L9Q6aQrZt/fbFT0zrNLvqXqCTHFsbIKBRGt0g==",
+        "receiptSha256": "0bf9bf397a1576d53ddf04b44c8529897821fecf6ac4cce73f4bfee3ec7ddd67"
+      },
+      "license": "MIT + 附加条款（Additional Terms — No Commercial Secondary Development）",
+      "licenseFile": "imports/isolation-build/community-managed-build-r3/portable/source-notices/LICENSE",
+      "licenseSha256": "a9a6b4fb724c6a42f68cc377969ee2816035367ab127aceba7f6af9da3656e5d",
+      "additionalTerms": {
+        "file": "imports/isolation-build/community-managed-build-r3/portable/source-notices/LICENSE.details",
+        "summary": "MIT 之外附加『禁止商业化二次开发』条款；直接使用不受限。"
+      },
+      "copiedSource": {
+        "patchDigest": "fe26651c76f60255ce88d1f867412cd2a0d313afa7be320bd16bb7c855f9cc7f",
+        "patchFiles": [
+          "runtime-sources/community-desktop/patches/（files.json + managed.patch）"
+        ],
+        "note": "对社区源码的全部修改记录在补丁回执，构建脚本 --kind community-desktop 复现。"
+      },
+      "provenance": {
+        "status": "verified",
+        "evidence": "已通过真实双实例验收并写入可信清单（manifest certified：assetId community-desktop:0.21.0:fe26651c76f6，evidenceSha256 0f2872a0…）；上游仓库 MIT + 附加条款随 source-notices 原样分发。"
+      }
+    },
+    {
+      "name": "node-js-distribution",
+      "displayName": "Node.js 官方发行版（官方网页版实例运行时，按需下载）",
+      "version": "v22.22.0-win-x64",
+      "classification": "external-download",
+      "origin": {
+        "resolvedUrl": "https://nodejs.org/dist/v22.22.0/win-x64/node.exe",
+        "localArchive": "imports/isolation-build/payloads/（构建沙箱内的已核验副本）",
+        "note": "实例创建时重新解析可信来源并校验完整性后才部署；详见 hub/electron/verified-node-archive.ts。"
+      },
+      "license": "MIT（Node.js 核心；bundled 组件许可随官方发行版 LICENSE 文件）",
+      "licenseFile": "Node 官方发行版自带 LICENSE/README（部署进实例目录时随附）",
+      "provenance": {
+        "status": "verified",
+        "evidence": "Node 官方发行版许可含全部捆绑组件声明；Hub 只在实例目录内分发、不改内容。"
+      }
+    },
+    {
+      "name": "dsh-npm-package",
+      "displayName": "@deepseek-ai/dsh（官方网页版实例运行体，按需 npm 安装）",
+      "version": "与官方 GitHub Releases 对齐（实例创建时锁定）",
+      "classification": "external-download",
+      "origin": {
+        "resolvedUrl": "https://registry.npmjs.org/@deepseek-ai/dsh（实例创建时解析）",
+        "note": "连同其依赖树安装进实例目录；各包自带许可声明。"
+      },
+      "license": "MIT（官方仓库 LICENSE；MIT 标签不描述其整棵依赖树——逐包许可随安装树分发）",
+      "licenseFile": "安装树内各包自带 LICENSE/NOTICE",
+      "provenance": {
+        "status": "verified",
+        "evidence": "按需安装、整树随实例分发；官方仓库 MIT 已核（license-research.md）。"
+      }
+    }
+  ],
+  "toolchain": {
+    "note": "构建/开发依赖（TypeScript、Vite、electron-builder、Vitest 等）不进分发包，其完整解析树由 hub/package-lock.json（lockfileVersion 3，2026-10-08 重建）与 hub/pnpm-lock.yaml 记录；单独分发构建工具时须另行生成清单。"
+  },
+  "localEvidenceNote": "本文件中的路径（artifact/licenseFile 等）指向构建机的本地证据工作区（imports/isolation-build/**），用于验收核对；公开源码仓库不含这些路径指向的运行体二进制（external-dependency 运行体按需获取）。",
+  "unresolvedIssues": [
+    {
+      "id": "hub-assets-origin",
+      "issue": "5 个公共资产（launcher-background.png、tray-background-default.png、qq-group-qr.jpg、telegram-qr.jpg、launcher-icon.png）的来源记录/独立替换尚未处理（Task8 资产批次，涉及用户决策）。",
+      "status": "resolved-by-author-attestation",
+      "blockingPublicRelease": false,
+      "resolution": "2026-10-09 用户（作者）直接确认：5 个资产全部为本人自制私有作品，明确允许随本项目开源分发；明确不允许魔改，尤其群聊二维码图片禁止更换。详见 assetAuthorization。"
+    },
+    {
+      "id": "runtimes-acceptance",
+      "issue": "community-desktop：已通过真实双实例验收并写入可信清单（certified，见 manifests/isolated-runtimes.json）。official-desktop：按环境豁免记录（8/11；3 项 HTTP 在线性受本机 AI 沙箱父上下文机制阻断，非产品缺陷——证据见 imports/isolation-build/official-r7-probe/ 与 final-validation/desktop/）——保持未认证、创建入口如实不可用；手动补证套件已备（official-r7-probe/manual-run/），在任何无沙箱环境复验通过后可随时升级为认证。",
+      "status": "partially-resolved",
+      "blockingPublicRelease": false
+    }
+  ],
+  "assetAuthorization": {
+    "status": "author-attested",
+    "confirmedOn": "2026-10-09",
+    "statement": "用户（作者）直接确认：下列 5 个内置图片全部为本人自制私有作品；明确允许随本项目开源分发；明确不允许魔改；特别要求群聊二维码图片禁止更换（保持原始像素内容）。",
+    "evidenceType": "direct-user-confirmation",
+    "scope": "所列摘要对应的项目内置图片。任何修改、重绘或替换均违反该授权，尤其 hub/public/qq-group-qr.jpg 与 hub/public/telegram-qr.jpg 禁止更换。",
+    "limitation": "记录作者确认，不声称取得逐项第三方许可文件或完成独立法律验证。",
+    "assets": [
+      {
+        "file": "hub/public/launcher-background.png",
+        "sha256": "c1031f60d5027a2a7133b50b962e43a0c46b4d361e936da469f28040ea00c911",
+        "bytes": 2749339
+      },
+      {
+        "file": "hub/public/tray-background-default.png",
+        "sha256": "609af161373fcd5873cc1d6bc94728aa91f7d6899d262c2e350a91e49dfc5f7c",
+        "bytes": 1588022
+      },
+      {
+        "file": "hub/public/qq-group-qr.jpg",
+        "sha256": "2e639ed40aa866a33f21193a9fe18102fe1bb20dd8d49b90802b9265eabfb5d1",
+        "bytes": 164677
+      },
+      {
+        "file": "hub/public/telegram-qr.jpg",
+        "sha256": "8495258d5068d1a9a793021c75eda619ab8f054300fc24cd672306c5614a541c",
+        "bytes": 337870
+      },
+      {
+        "file": "hub/public/launcher-icon.png",
+        "sha256": "67a1c0a19b229b61bcb9ade3efc4dd366383f20fc4aec4056e6893a8505f0e32",
+        "bytes": 97910
+      }
+    ]
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "name": "dsh-desktop-hub",
+  "version": "1.0.0",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "author": "凛枫 (WhaleRealm)",
+  "description": "A local graphical manager for DeepSeek Harness desktop instances, with per-instance isolation.",
+  "keywords": [
+    "dsh",
+    "deepseek",
+    "harness",
+    "desktop",
+    "instance",
+    "manager",
+    "electron",
+    "isolation"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "preview": "vite preview --host 127.0.0.1",
+    "package:win": "npm run build && electron-builder --win nsis --publish never",
+    "package:portable": "npm run build && electron-builder --win zip --publish never"
+  },
+  "dependencies": {
+    "lucide-react": "1.47.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "electron": "43.7.3",
+    "electron-builder": "26.15.3",
+    "jsdom": "^27.4.0",
+    "postcss": "^8.5.28",
+    "typescript": "7.0.2",
+    "vite": "^8.2.1",
+    "vite-plugin-electron": "^1.1.1",
+    "vite-plugin-electron-renderer": "^1.0.0",
+    "vitest": "^4.1.10"
+  },
+  "build": {
+    "appId": "com.whalerealm.app",
+    "productName": "WhaleRealm",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "docs/**/*",
+      "licenses/**/*",
+      "package.json"
+    ],
+    "extraResources": [],
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "artifactName": "WhaleRealm-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "鲸域 · WhaleRealm",
+      "artifactName": "WhaleRealm-${version}-setup.${ext}"
+    }
+  }
+}

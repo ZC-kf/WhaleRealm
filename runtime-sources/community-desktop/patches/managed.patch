@@ -1,0 +1,823 @@
+--- a/src-tauri/resources/manifest.jsonc
++++ b/src-tauri/resources/manifest.jsonc
+@@ -32,14 +32,14 @@
+         "windows": "node.exe",
+         "default": "bin/node"
+       },
+-      "managedRoot": "$AppData/runtime",
+-      "overridable": true
++      "managedRoot": "$Resources/node",
++      "overridable": false
+     },
+     "pnpm": {
+       "engine": ">=11.7.0",
+       "entry": "bin/pnpm.cjs",
+-      "managedRoot": "$AppData/dependencies/pnpm",
+-      "overridable": true
++      "managedRoot": "$Resources/pnpm",
++      "overridable": false
+     },
+     "dsh": {
+       "engine": {
+@@ -47,8 +47,8 @@
+         "minimum": "0.1.5-rc.1"
+       },
+       "entry": "node_modules/@deepseek-ai/dsh/lib/bin.js",
+-      "managedRoot": "$AppData/dependencies/dsh",
+-      "overridable": true
++      "managedRoot": "$Resources/dsh",
++      "overridable": false
+     },
+     "git": {
+       "engine": ">2.53.0.2",
+@@ -57,7 +57,7 @@
+         "default": "bin/git"
+       },
+       "managedRoot": "$AppData/dependencies/git",
+-      "overridable": true
++      "overridable": false
+     }
+   },
+   "plugins": {
+--- a/src-tauri/src/bridge/guard.rs
++++ b/src-tauri/src/bridge/guard.rs
+@@ -20,7 +20,7 @@
+     if let Ok(download_dir) = app_handle.path().download_dir() {
+         roots.push(download_dir);
+     }
+-    if let Ok(data_dir) = app_handle.path().app_data_dir() {
++    if let Ok(data_dir) = app_handle.path().app_data_dir().map(|_| crate::managed::path("cache/app-data")) {
+         roots.push(data_dir);
+     }
+     let dsh_home = crate::config::get_dsh_data_path(app_handle);
+--- a/src-tauri/src/bridge/pet.rs
++++ b/src-tauri/src/bridge/pet.rs
+@@ -631,7 +631,7 @@
+         PetSource::Chat => Ok(config::get_dsh_data_path(app).join("pets")),
+         PetSource::Codex => app
+             .path()
+-            .home_dir()
++            .home_dir().map(|_| crate::managed::path("cache/home"))
+             .map(|home| home.join(".codex").join("pets"))
+             .map_err(|error| format!("PET_HOME_DIR_FAILED: failed to resolve home dir: {error}")),
+     }
+--- a/src-tauri/src/config/dependencies.rs
++++ b/src-tauri/src/config/dependencies.rs
+@@ -165,8 +165,35 @@
+     read_mapping(app).get(key)
+ }
+ 
++/// WhaleRealm 受管实例的私有核心副本根（环境变量 `WR_INSTANCE_CORE`）。
++///
++/// Hub 在启动前把随包 `$Resources/dsh` 复制到实例根的 `cache/app-data/core`，并把该
++/// 绝对路径传入；核心的运行期消费者据此改写实例私有副本，安装目录里已登记摘要的
++/// 随包资源保持只读。只有与 `WR_INSTANCE_ROOT/cache/app-data/core` 完全一致且为绝对
++/// 路径的取值才被采信，其余取值忽略并回落清单托管根。无受管身份的直接启动已在入口
++/// （[`crate::managed::initialize`]）处被拒绝，这里无需单独失败。
++fn instance_core_root() -> Option<PathBuf> {
++    let raw = std::env::var("WR_INSTANCE_CORE").ok()?;
++    if raw.is_empty() {
++        return None;
++    }
++    let core = PathBuf::from(raw);
++    let root = std::env::var("WR_INSTANCE_ROOT").ok().map(PathBuf::from)?;
++    if !core.is_absolute() || root.join("cache/app-data/core") != core {
++        return None;
++    }
++    Some(core)
++}
++
+ /// 清单声明的默认托管根（映射未记录或为系统时使用）
+ pub fn managed_root<R: Runtime>(app: &AppHandle<R>, key: &str) -> PathBuf {
++    // WhaleRealm 受管实例：dsh 核心的托管根解析到实例私有可写副本，随包资源不再被
++    // 运行期改写（映射记录因清单 `overridable: false` 本就被忽略）。
++    if key == DEP_DSH {
++        if let Some(core) = instance_core_root() {
++            return core;
++        }
++    }
+     let declared = manifest::dependency_spec(app, key).and_then(|spec| spec.managed_root);
+     match declared {
+         Some(raw) => manifest::resolve_location(app, &raw),
+@@ -210,6 +237,11 @@
+ /// 判定按**清单托管根**而不是当前生效根：随包核心始终是安装目录里那一份，与该依赖
+ /// 当前是否被映射到别处的槽位无关。
+ pub fn bundled_core_dir<R: Runtime>(app: &AppHandle<R>) -> Option<PathBuf> {
++    // WhaleRealm 受管实例：随包核心的运行期真值是实例私有副本（由随包资源复制而来，
++    // 「随包/离线」语义不变）；只读安装目录不再参与解析。
++    if let Some(core) = instance_core_root() {
++        return Some(core);
++    }
+     let root = manifest::resource_root(app)?;
+     let managed = managed_root(app, DEP_DSH);
+     // 资源根自身不算：只有把核心托管到 `$Resources/<name>` 才是随包构建。
+--- a/src-tauri/src/config/runtime.rs
++++ b/src-tauri/src/config/runtime.rs
+@@ -26,7 +26,7 @@
+     }
+     let base = app_handle
+         .path()
+-        .app_data_dir()
++        .app_data_dir().map(|_| crate::managed::path("cache/app-data"))
+         .expect("Failed to resolve app data directory");
+     if cfg!(debug_assertions) {
+         base.join(APP_DATA_DEV_DIR_NAME)
+@@ -192,6 +192,7 @@
+ 
+ /// 检测本地是否存在版本兼容的 Node.js 环境，返回其二进制路径
+ pub fn get_local_node_path() -> Option<PathBuf> {
++    if crate::managed::enabled() {return None;}
+     let node = find_local_node_binary()?;
+     let version = get_node_version_of_path(&node)?;
+     is_supported_node_version(&version).then_some(node)
+@@ -475,6 +476,7 @@
+ /// - debug 子进程由 launch 显式收到同一个 `~/.dsh.dev`，开发版与生产版的会话、档案、
+ ///   插件与主题因此互不干扰。
+ pub fn get_dsh_data_path<R: Runtime>(_app_handle: &AppHandle<R>) -> PathBuf {
++    if crate::managed::enabled() {return crate::managed::path("data/dsh-home");}
+     let dir_name = if cfg!(debug_assertions) {
+         DSH_HOME_DEV_DIR_NAME
+     } else {
+--- a/src-tauri/src/config/setting.rs
++++ b/src-tauri/src/config/setting.rs
+@@ -156,6 +156,7 @@
+ }
+ 
+ fn normalize_setting(setting: &mut Setting) {
++    if crate::managed::enabled() {setting.port=crate::managed::port();setting.manual_port=Some(setting.port);setting.cli_link_enabled=false;setting.active_core=Some("app".into());setting.auto_start=true;setting.installed=true;}
+     setting.appearance.normalize();
+     setting.zoom_factor = normalize_zoom_factor(setting.zoom_factor);
+     setting.harness_max_heap_mb = normalize_harness_max_heap_mb(setting.harness_max_heap_mb);
+@@ -165,6 +166,7 @@
+ 
+ /// 默认服务端口：debug 构建与生产隔离，避免开发时与已运行的桌面端争用 3080。
+ pub fn default_port() -> u16 {
++    if crate::managed::enabled() {return crate::managed::port();}
+     if cfg!(debug_assertions) {
+         DSH_DEV_PORT
+     } else {
+@@ -216,6 +218,7 @@
+ /// 注意 `app_data_dir()` 在 Windows 上由 `SHGetKnownFolderPath` 解析，重定向
+ /// `APPDATA` 环境变量**无法**把 store 引到 scratch 目录——三方隔离只能靠换文件名。
+ pub fn store_dat_file_name() -> &'static str {
++    if crate::managed::enabled() {static NAME: OnceLock<String> = OnceLock::new();return NAME.get_or_init(||crate::managed::path("cache/app-data/store.json").to_string_lossy().into_owned()).as_str();}
+     resolve_store_dat_file(is_e2e_run(), cfg!(debug_assertions))
+ }
+ 
+@@ -279,7 +282,7 @@
+     *FIRST_INSTALL.get_or_init(|| {
+         app_handle
+             .path()
+-            .app_data_dir()
++            .app_data_dir().map(|_| crate::managed::path("cache/app-data"))
+             // 目录解析失败按老用户处理（保守：不做引导，回落 web 档案老行为）
+             .map(|dir| !dir.join(store_dat_file_name()).exists())
+             .unwrap_or(false)
+--- a/src-tauri/src/desktop/autostart.rs
++++ b/src-tauri/src/desktop/autostart.rs
+@@ -69,6 +69,7 @@
+ 
+ /// 从系统读取当前登录启动状态，允许用户在系统设置中直接修改它。
+ pub fn is_enabled<R: Runtime>(app_handle: &AppHandle<R>) -> Result<bool, String> {
++    if crate::managed::enabled() {return Ok(false);}
+     #[cfg(windows)]
+     if !windows_run_entry_exists(app_name())? {
+         return Ok(false);
+@@ -82,6 +83,7 @@
+ 
+ /// 写入登录启动状态并复查结果，禁用操作保持幂等。
+ pub fn set_enabled<R: Runtime>(app_handle: &AppHandle<R>, enabled: bool) -> Result<bool, String> {
++    if crate::managed::enabled() {return Err("Global autostart disabled by WhaleRealm".into());}
+     let manager = app_handle.autolaunch();
+     if enabled {
+         #[cfg(windows)]
+--- a/src-tauri/src/desktop/builder.rs
++++ b/src-tauri/src/desktop/builder.rs
+@@ -75,6 +75,7 @@
+ /// 实例或热重启残留占用同一 User Data 管道，触发 HRESULT 0x8007139F。
+ #[cfg(windows)]
+ fn webview_data_directory(app: &tauri::AppHandle<Wry>) -> std::path::PathBuf {
++    if crate::managed::enabled() {return crate::managed::path("data/electron-user-data/webview");}
+     // E2E 独占 profile：`app_local_data_dir()` 走 `SHGetKnownFolderPath`，重定向
+     // `LOCALAPPDATA` 无效，不覆盖就会与用户正在使用的开发版共用 `EBWebView-dev`
+     // （localStorage 等前端状态互相污染）。
+@@ -88,7 +89,7 @@
+ 
+     let mut directory = app
+         .path()
+-        .app_local_data_dir()
++        .app_local_data_dir().map(|_| crate::managed::path("cache/local-app-data"))
+         .expect("Failed to resolve app local data directory");
+     directory.push(if cfg!(debug_assertions) {
+         "EBWebView-dev"
+@@ -134,7 +135,7 @@
+     // `dsh://` 深链（成功页「打开应用」按钮）：仅打包态注册协议并接管 open-url
+     // （debug 注册会把系统 `dsh:` 指向调试产物）。
+     #[cfg(not(debug_assertions))]
+-    crate::desktop::deep_link::init(&app_handle);
++    // Global deep-link registration is disabled in this managed distribution.
+ 
+     // 开机自启动：已安装且开启 auto_start 时拉起服务
+     let app_for_start = app_handle.clone();
+@@ -1535,9 +1536,7 @@
+     // `deep-link` feature 只在单例在场时起作用：把二次启动携带的 `dsh://` URL
+     // （成功页「打开应用」按钮）转发给主实例派发 open-url。
+     #[cfg(not(debug_assertions))]
+-    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+-        crate::utils::show_main_window(app);
+-    }));
++    let builder = builder; // Managed identity owns the private OS file lock.
+ 
+     // Windows/WebView2 上 wry 忽略 `for_main_frame_only`、把每个初始化脚本注入所有子 frame，
+     // 而 Tauri 只在 main frame 定义 `window.__TAURI_INTERNALS__`；dsh GUI 所在的跨源 iframe
+@@ -1548,15 +1547,10 @@
+ 
+     let builder = builder
+         // 官方跨平台登录启动实现：Windows HKCU Run、macOS LaunchAgent、Linux XDG。
+-        .plugin(
+-            tauri_plugin_autostart::Builder::new()
+-                .app_name(crate::desktop::autostart::app_name())
+-                .build(),
+-        )
+         // Opener plugin
+         .plugin(tauri_plugin_opener::init())
+         // Notification plugin（官方插件）：权限查询等通用通知能力。
+-        .plugin(tauri_plugin_notification::init())
++        
+         // FS plugin
+         .plugin(tauri_plugin_fs::init())
+         // HTTP plugin：桌宠窗口拉取远端宠物素材时把 fetch 交给 Rust 发起，
+@@ -1582,7 +1576,7 @@
+         .unwrap_or(false);
+     #[cfg(not(target_os = "macos"))]
+     let in_app_bundle = true;
+-    let builder = if in_app_bundle {
++    let builder = if in_app_bundle && !crate::managed::enabled() {
+         builder.plugin(tauri_plugin_notifications::init())
+     } else {
+         log::warn!(
+@@ -1595,7 +1589,7 @@
+     // `dsh://` 深链（成功页「打开应用」按钮）只在打包态启用：debug 注册会把系统
+     // `dsh:` 指向调试产物，与官方 Electron 的 `app.isPackaged` 门禁一致。
+     #[cfg(not(debug_assertions))]
+-    let builder = builder.plugin(tauri_plugin_deep_link::init());
++    let builder = builder; // No global protocol registration.
+ 
+     builder
+ }
+--- a/src-tauri/src/desktop/notification.rs
++++ b/src-tauri/src/desktop/notification.rs
+@@ -149,6 +149,7 @@
+     webview: tauri::webview::PlatformWebview,
+     parent: tauri::WebviewWindow<tauri::Wry>,
+ ) -> Result<(), Box<dyn std::error::Error>> {
++    if crate::managed::enabled() {return Ok(());}
+     use rfd::{MessageButtons, MessageDialog, MessageDialogResult};
+     use webview2_com::{
+         ExecuteScriptCompletedHandler, FrameContentLoadingEventHandler, FrameCreatedEventHandler,
+@@ -233,6 +234,7 @@
+         webview2: &webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2,
+         origins: &[String],
+     ) -> Result<(), Box<dyn std::error::Error>> {
++    if crate::managed::enabled() {return Ok(());}
+         let webview13 = webview2.cast::<ICoreWebView2_13>()?;
+         let profile = webview13.Profile()?;
+         let Ok(profile4) = profile.cast::<ICoreWebView2Profile4>() else {
+--- a/src-tauri/src/desktop/pet.rs
++++ b/src-tauri/src/desktop/pet.rs
+@@ -308,7 +308,7 @@
+     // 非 Windows 平台在此前加入注入脚本时再赋值，故需要 mut；Windows 下保持只读。
+     #[allow(unused_mut)]
+     let mut builder =
+-        WebviewWindowBuilder::new(app, PET_WINDOW_LABEL, WebviewUrl::App("pet.html".into()))
++        WebviewWindowBuilder::new(app, PET_WINDOW_LABEL, WebviewUrl::App("pet.html".into())).data_directory(crate::managed::path("data/electron-user-data/webview"))
+             .title("Deepseek Harness Pet")
+             .inner_size(width, height)
+             .resizable(false)
+--- a/src-tauri/src/lib.rs
++++ b/src-tauri/src/lib.rs
+@@ -1,3 +1,4 @@
++pub mod managed;
+ mod bridge;
+ mod config;
+ pub mod desktop;
+@@ -17,6 +18,7 @@
+ /// 应用入口：先做 Wayland 环境兼容（见 `should_apply_wayland_egl_workaround` 与
+ /// `should_restore_wayland_backend`），再初始化日志、装配桌面端并进入事件循环。
+ pub fn run() {
++    managed::initialize().expect("invalid managed launch");
+     // Wayland EGL workaround：仅 AppImage 需要（见 `should_apply_wayland_egl_workaround`）。
+     if should_apply_wayland_egl_workaround(
+         &std::env::var("XDG_SESSION_TYPE").unwrap_or_default(),
+--- a/src-tauri/src/logger/mod.rs
++++ b/src-tauri/src/logger/mod.rs
+@@ -33,6 +33,7 @@
+ /// 仅用 `std::env` 解析，不依赖 `AppHandle`，因此也是启动前读取 store 的路径来源
+ /// （`config::force_xwayland_setting`）。
+ pub(crate) fn identifier_dir() -> Option<PathBuf> {
++    if crate::managed::enabled() {return Some(crate::managed::path("cache/app-data"));}
+     #[cfg(target_os = "windows")]
+     {
+         let appdata = std::env::var("APPDATA").ok()?;
+--- a/src-tauri/src/main.rs
++++ b/src-tauri/src/main.rs
+@@ -2,6 +2,7 @@
+ #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+ 
+ fn main() {
++    if let Err(error)=main::managed::initialize() { eprintln!("{error}"); std::process::exit(2); }
+     // 无 GUI 的补丁入口：E2E 的插件 L2 直接起 `dsh web`，需要把 npm 装来的核心
+     // 打成与桌面端装配核心同样的形态。复用 lib 里的补丁集，而不是另抄一份实现。
+     let args: Vec<String> = std::env::args().collect();
+--- a/src-tauri/src/managed.rs
++++ b/src-tauri/src/managed.rs
+@@ -0,0 +1,38 @@
++// WhaleRealm Copyright (C) 2026 凛枫. SPDX-License-Identifier: GPL-3.0-or-later
++use std::{path::{Path,PathBuf},sync::OnceLock,fs::{File,OpenOptions}};
++struct Identity { root: PathBuf, id: String, nonce: String, port: u16, _lock: File }
++static IDENTITY: OnceLock<Identity> = OnceLock::new();
++pub fn enabled() -> bool { true }
++pub fn path(relative: &str) -> PathBuf { IDENTITY.get().expect("managed identity must initialize first").root.join(relative) }
++pub fn port() -> u16 { IDENTITY.get().expect("managed identity").port }
++fn checked(p: &Path) -> Result<(),String> {
++ for item in p.ancestors() {
++  let meta=std::fs::symlink_metadata(item).map_err(|e|e.to_string())?;
++  #[cfg(windows)] { use std::os::windows::fs::MetadataExt; if meta.file_attributes() & 0x400 != 0 { return Err("Managed reparse point denied".into()) } }
++  if meta.file_type().is_symlink() { return Err("Managed linked path denied".into()) }
++ }
++ Ok(())
++}
++pub fn initialize() -> Result<(),String> {
++ if IDENTITY.get().is_some() { return Ok(()) }
++ let get=|key:&str|std::env::var(key).map_err(|_|format!("Managed Desktop requires {key}"));
++ let root=PathBuf::from(get("WR_INSTANCE_ROOT")?);let id=get("WR_INSTANCE_ID")?;let nonce=get("WR_LAUNCH_NONCE")?;
++ let port=get("WR_INSTANCE_PORT")?.parse::<u16>().map_err(|e|e.to_string())?;
++ if !root.is_absolute() || id.is_empty() || id.len()>64 || !id.bytes().all(|b|b.is_ascii_alphanumeric() || b"._-".contains(&b)) || nonce.len()!=64 || !nonce.bytes().all(|b|b.is_ascii_hexdigit()) || port<1024 || port==3080 {return Err("Invalid managed identity".into())}
++ for rel in ["","runtime","data/dsh-home","data/electron-user-data","workspace","logs","cache","cache/home","cache/app-data","cache/local-app-data","cache/temp"] { checked(&root.join(rel))?; }
++ for (key,rel) in [("DSH_HOME","data/dsh-home"),("HOME","cache/home"),("USERPROFILE","cache/home"),("APPDATA","cache/app-data"),("LOCALAPPDATA","cache/local-app-data"),("TEMP","cache/temp"),("TMP","cache/temp")] {
++  if PathBuf::from(get(key)?)!=root.join(rel) {return Err(format!("Invalid private {key}"))}
++ }
++ let lock_path=root.join("data/electron-user-data/managed.lock");
++ if lock_path.exists(){checked(&lock_path)?;}
++ let lock=OpenOptions::new().read(true).write(true).create(true).truncate(false).open(lock_path).map_err(|e|e.to_string())?;
++ lock.try_lock().map_err(|e|format!("Managed instance already running: {e}"))?;
++ IDENTITY.set(Identity{root,id,nonce,port,_lock:lock}).map_err(|_|"Managed identity duplicate".to_string())?;
++ Ok(())
++}
++pub fn ready() {
++ let i=IDENTITY.get().expect("managed identity");
++ let file=path(&format!("logs/ready-{}.json",i.nonce));
++ let body=serde_json::json!({"id":i.id,"nonce":i.nonce,"port":i.port,"url":format!("http://127.0.0.1:{}",i.port)});
++ if let Err(e)=std::fs::write(&file,body.to_string()) {log::error!("Managed readiness receipt failed: {e}");}
++}
+--- a/src-tauri/src/service/cli/core.rs
++++ b/src-tauri/src/service/cli/core.rs
+@@ -46,6 +46,7 @@
+ /// 只做 shim 生成与 PATH 注册，不要求 node/dsh/pnpm 已安装——运行时缺失时
+ /// shim 会给出友好报错，因此安装前后调用都是安全的。
+ pub fn ensure(app_handle: &AppHandle) -> Result<CliLinkStatus, String> {
++    if crate::managed::enabled() {return Err("Global CLI integration disabled by WhaleRealm".into());}
+     // 保证 DSH_HOME 目录存在（shim 会写入该路径）
+     let dsh_home = config::get_dsh_data_path(app_handle);
+     fs::create_dir_all(&dsh_home).map_err(|e| format!("create dsh home failed: {e}"))?;
+@@ -73,6 +74,7 @@
+ /// 供预装插件等应用内部流程使用：需要 `pnpm`/`dsh` 可被子进程解析，
+ /// 但不希望改动用户的 PATH 注册（避免与"命令行集成"开关状态不一致）。
+ pub fn ensure_shims(app_handle: &AppHandle) -> Result<(), String> {
++    if crate::managed::enabled() {return Ok(());}
+     let bin_dir = get_bin_dir(app_handle);
+     write_shims(app_handle, &bin_dir)?;
+     log::info!("dsh/pnpm shims ensured at {}", bin_dir.display());
+@@ -81,6 +83,7 @@
+ 
+ /// 禁用并清理命令行集成（删除 shim + 移除 PATH 注册）
+ pub fn remove(app_handle: &AppHandle) -> Result<CliLinkStatus, String> {
++    if crate::managed::enabled() {return Err("Global CLI integration disabled by WhaleRealm".into());}
+     // 开发（debug）构建不删除 shim、不注销 PATH：这些是共享的用户级状态，
+     // 由生产版维护——开发版执行清理会让正在运行的生产版命令行集成失效。
+     if cfg!(debug_assertions) {
+--- a/src-tauri/src/service/cli/path/mod.rs
++++ b/src-tauri/src/service/cli/path/mod.rs
+@@ -59,7 +59,7 @@
+             .or_else(|| {
+                 app_handle
+                     .path()
+-                    .local_data_dir()
++                    .local_data_dir().map(|_| crate::managed::path("cache/local-app-data"))
+                     .ok()
+                     .and_then(|d| d.parent().map(|p| p.to_path_buf()))
+             })
+@@ -75,7 +75,7 @@
+     {
+         let home = app_handle
+             .path()
+-            .home_dir()
++            .home_dir().map(|_| crate::managed::path("cache/home"))
+             .unwrap_or_else(|_| PathBuf::from("."));
+         if cfg!(debug_assertions) {
+             home.join(".local/bin/dev")
+@@ -123,7 +123,7 @@
+         // 2. rc 文件中已注入标记块（重启 shell 后可用）
+         let home = app_handle
+             .path()
+-            .home_dir()
++            .home_dir().map(|_| crate::managed::path("cache/home"))
+             .unwrap_or_else(|_| PathBuf::from("."));
+         RC_FILES.iter().any(|name| {
+             fs::read_to_string(home.join(name))
+--- a/src-tauri/src/service/cli/path/pnpm.rs
++++ b/src-tauri/src/service/cli/path/pnpm.rs
+@@ -15,6 +15,7 @@
+ /// 捆绑安装；Unix GUI 额外检查 mise 标准数据目录，生成的 `pnpm` shim 也会
+ /// 优先转发到探测出的精确路径。
+ pub fn find_user_pnpm(app_handle: &AppHandle) -> Option<PathBuf> {
++    if crate::managed::enabled() {return None;}
+     let dirs = user_pnpm_dirs(app_handle);
+     find_pnpm_in_dirs(&get_bin_dir(app_handle), &dirs)
+ }
+@@ -36,7 +37,7 @@
+     {
+         let mise_data = std::env::var_os("MISE_DATA_DIR").map(PathBuf::from);
+         let xdg_data = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from);
+-        let home = _app_handle.path().home_dir().ok();
++        let home = _app_handle.path().home_dir().map(|_| crate::managed::path("cache/home")).ok();
+         append_unix_mise_dirs(
+             &mut dirs,
+             mise_data.as_deref(),
+--- a/src-tauri/src/service/cli/path/rc.rs
++++ b/src-tauri/src/service/cli/path/rc.rs
+@@ -27,7 +27,7 @@
+ pub(super) fn inject_shell_rc(app_handle: &AppHandle) -> Result<(), String> {
+     let home = app_handle
+         .path()
+-        .home_dir()
++        .home_dir().map(|_| crate::managed::path("cache/home"))
+         .map_err(|_| "RC_HOME_RESOLVE_FAILED: failed to resolve home directory".to_string())?;
+     let block = format!("{RC_MARK_START}\nexport PATH=\"$HOME/.local/bin:$PATH\"\n{RC_MARK_END}\n");
+ 
+@@ -58,7 +58,7 @@
+ pub(super) fn strip_shell_rc(app_handle: &AppHandle) -> Result<(), String> {
+     let home = app_handle
+         .path()
+-        .home_dir()
++        .home_dir().map(|_| crate::managed::path("cache/home"))
+         .map_err(|_| "RC_HOME_RESOLVE_FAILED: failed to resolve home directory".to_string())?;
+     for name in RC_FILES {
+         let rc_path = home.join(name);
+--- a/src-tauri/src/service/core/local.rs
++++ b/src-tauri/src/service/core/local.rs
+@@ -25,6 +25,7 @@
+ /// 目录——用户可能恰好把 npm/pnpm 全局 dsh 装进 `~/.local/bin`（Unix XDG 约定，
+ /// 与本应用 shim 目录相同），若整目录跳过会误判为"无本地 dsh"（issue #54）。
+ pub(super) fn find_user_dsh_bin(app_handle: &AppHandle) -> Option<PathBuf> {
++    if crate::managed::enabled() {return None;}
+     let candidates: &[&str] = if cfg!(windows) {
+         &["dsh.cmd", "dsh.exe", "dsh.bat"]
+     } else {
+@@ -55,7 +56,7 @@
+     #[cfg(unix)]
+     let dirs: Vec<PathBuf> = {
+         let mut dirs = path_dirs;
+-        if let Ok(home) = app_handle.path().home_dir() {
++        if let Ok(home) = app_handle.path().home_dir().map(|_| crate::managed::path("cache/home")) {
+             dirs.push(home.join(".local").join("bin"));
+             append_unix_dsh_dirs(&mut dirs, &home);
+         }
+--- a/src-tauri/src/service/patch/browser_auth.rs
++++ b/src-tauri/src/service/patch/browser_auth.rs
+@@ -0,0 +1,131 @@
++//! browser-auth 载体补丁：让管理实例的本地桌面载体无需启动 token 即可访问内置 Web。
++//!
++//! 背景：dsh 核心自带启动鉴权以来，`dsh --profile web` 把 SPA 门禁在「每进程随机
++//! 启动 token」之后——`GET /` 无有效 token / cookie 一律 401
++//! （`@deepseek-ai/dsh-client-connection` 的 `BrowserAuth`）。社区桌面的设计是
++//! 「alpha 鉴权由启动前的桌面端 patch 处理，iframe 永远不携带启动 token」
++//! （见 `src/store/modules/harness/utils.ts`）：内嵌 iframe 用的是干净的
++//! `http://127.0.0.1:<port>?t=…&dshDesktop=1`，从不带上 token；同时
++//! `is_dsh_running` 的就绪探测也是无 token 的 `GET /`（要求 200）。
++//!
++//! 上游随桌面端发行的核心版本比本补丁集新，连接层新增了上述启动 token，而桌面端
++//! 补丁集尚未覆盖它，于是：`GET /` 恒为 401 → 就绪探测永不通过 → 状态到不了
++//! Running（也就不会落就绪文件），且内嵌 GUI 会显示鉴权提示。本补丁补齐上游缺失
++//! 的「桌面端鉴权补丁」：把 `BrowserAuth.isAuthenticated` 判定改成恒真，等价于
++//! 「本地载体已被信任」。
++//!
++//! 信任边界：Harness 只绑定 `127.0.0.1`，且 `/api` 另有 Origin/Referer 浏览器信任
++//! 围栏（`--trusted-host`）拦截跨站请求；本补丁只取消「每进程启动 token」这一层，
++//! 面向的是本机单用户隔离实例（自有端口、自有核心副本、自有 Electron user-data），
++//! 与随包上游桌面端对其内嵌载体的既定处置一致。
++//!
++//! 目标选择：**活动核心**（本地核心或预打包核心），读写与幂等判定统一交给
++//! [`crate::utils::patch_dsh`]；本模块只提供纯函数式补丁判定 [`patch_source`]。
++//!
++//! 幂等与容错：目标已含标记即跳过；文件缺失或锚点因上游布局变更找不到 → 跳过并
++//! 告警，不阻断启动。挂点：`service::workflow::launch` 启动 dsh 进程前，与其余
++//! 核心补丁同一位置（最佳努力，失败只告警）。
++
++use std::path::Path;
++
++use crate::utils::{patch_core_file, patch_dsh, PatchOutcome};
++
++/// 幂等标记：注入语句里带注释，重跑时直接命中「已打过」。
++const MARKER: &str = "WhaleRealm managed carrier: trust local desktop requests";
++
++/// `BrowserAuth.isAuthenticated` 方法定义锚点（带方法名与形参，避免命中调用点）。
++const ANCHOR: &str = "isAuthenticated(request) {";
++
++/// 相对活动核心安装目录的 dsh-client-connection 包内路径。
++const CONNECTION_INDEX_JS: &str =
++    "node_modules/@deepseek-ai/dsh-client-connection/lib/index.js";
++
++/// 幂等补丁逻辑的纯函数部分（便于单测，不触碰文件系统）。
++///
++/// 在 `isAuthenticated(request) {` 之后插入 `return true;`，按锚点所在行的**实际
++/// 前导缩进**再进一级，避免上游产物缩进（tab/空格）变化时插出坏行。
++fn patch_source(source: &str) -> PatchOutcome {
++    if source.contains(MARKER) {
++        return PatchOutcome::AlreadyPatched;
++    }
++    let Some(position) = source.find(ANCHOR) else {
++        return PatchOutcome::AnchorMissing;
++    };
++    let after = position + ANCHOR.len();
++    let line_start = source[..position]
++        .rfind('\n')
++        .map(|index| index + 1)
++        .unwrap_or(0);
++    let indent: String = source[line_start..position]
++        .chars()
++        .take_while(|character| *character == '\t' || *character == ' ')
++        .collect();
++    let body_indent = format!("{indent}\t");
++    let mut patched = source.to_string();
++    patched.insert_str(
++        after,
++        &format!("\n{body_indent}/* {MARKER} */\n{body_indent}return true;"),
++    );
++    PatchOutcome::Patched(patched)
++}
++
++/// 对活动核心的 dsh-client-connection `lib/index.js` 应用补丁（幂等）。
++/// 返回 Err 表示读/写失败；文件缺失、已打过、锚点变更均静默跳过（Ok）。
++pub fn apply(app_handle: &tauri::AppHandle) -> Result<(), String> {
++    patch_dsh(app_handle, CONNECTION_INDEX_JS, patch_source)
++}
++
++/// 对显式给定的核心安装目录施加本补丁（E2E 编排复用，无需运行中的桌面端）。
++pub fn apply_at(core_dir: &Path) -> Result<(), String> {
++    patch_core_file(core_dir, CONNECTION_INDEX_JS, patch_source)
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    /// 上游打包产物里该类方法的最小上下文（单 tab 缩进）。
++    const SOURCE: &str = "\t/** verify */\n\tisAuthenticated(request) {\n\t\tconst authority = requestAuthority(request.headers);\n\t\treturn true;\n\t}\n";
++
++    #[test]
++    fn inserts_return_true_after_anchor() {
++        match patch_source(SOURCE) {
++            PatchOutcome::Patched(patched) => {
++                assert!(patched.contains(MARKER));
++                assert!(patched.contains(
++                    "isAuthenticated(request) {\n\t\t/* WhaleRealm managed carrier: trust local desktop requests */\n\t\treturn true;\n\t\tconst authority"
++                ));
++            }
++            other => panic!("expected Patched, got {other:?}"),
++        }
++    }
++
++    #[test]
++    fn matches_double_tab_indentation() {
++        let double_tab = "\t\tisAuthenticated(request) {\n\t\t\tconst authority = 0;\n";
++        match patch_source(double_tab) {
++            PatchOutcome::Patched(patched) => {
++                // 插入体与锚点行对齐后再进一级（双 tab → 三 tab）
++                assert!(patched.contains(
++                    "isAuthenticated(request) {\n\t\t\t/* WhaleRealm managed carrier: trust local desktop requests */\n\t\t\treturn true;"
++                ));
++                assert!(!patched.contains("\n\t\treturn true;"));
++            }
++            other => panic!("expected Patched, got {other:?}"),
++        }
++    }
++
++    #[test]
++    fn is_idempotent() {
++        let PatchOutcome::Patched(patched) = patch_source(SOURCE) else {
++            panic!("expected Patched");
++        };
++        assert_eq!(patch_source(&patched), PatchOutcome::AlreadyPatched);
++    }
++
++    #[test]
++    fn skips_when_anchor_missing() {
++        let altered = "isAuthenticated(request, extra) {\n\treturn false;\n}\n";
++        assert_eq!(patch_source(altered), PatchOutcome::AnchorMissing);
++    }
++}
+--- a/src-tauri/src/service/update/install.rs
++++ b/src-tauri/src/service/update/install.rs
+@@ -23,7 +23,7 @@
+ fn updates_dir(app_handle: &AppHandle) -> Result<PathBuf, String> {
+     let dir = app_handle
+         .path()
+-        .app_data_dir()
++        .app_data_dir().map(|_| crate::managed::path("cache/app-data"))
+         .map_err(|e| format!("UPDATE_DIR: {e}"))?
+         .join(UPDATES_DIR);
+     std::fs::create_dir_all(&dir).map_err(|e| format!("UPDATE_DIR: {e}"))?;
+@@ -53,6 +53,7 @@
+ 
+ /// 检查是否有新版本可用（含安装包是否已下载）
+ pub async fn check(app_handle: &AppHandle) -> Result<Option<DesktopUpdateInfo>, String> {
++    if crate::managed::enabled() {return Ok(None);}
+     match fetch_latest_release().await? {
+         None => Ok(None),
+         Some(r) => {
+@@ -217,6 +218,7 @@
+ /// 宁可失败，防止第三方镜像投毒未被察觉；官方 GitHub 直连在摘要缺失时仍可
+ /// 按旧行为下载（兼容早期未填摘要的发布），下载后若有摘要则强制校验。
+ pub async fn download(app_handle: &AppHandle) -> Result<DesktopUpdateInfo, String> {
++    if crate::managed::enabled() {return Err("Updates require a certified WhaleRealm deployment".into());}
+     let release = fetch_latest_release()
+         .await?
+         .ok_or_else(|| "UPDATE_NONE".to_string())?;
+@@ -401,6 +403,7 @@
+ 
+ /// 打开安装包：交给系统默认处理器（Windows 会触发 UAC 执行安装器）。
+ pub async fn open_installer(app_handle: &AppHandle, path: String) -> Result<(), String> {
++    if crate::managed::enabled() {return Err("Installer execution disabled by WhaleRealm".into());}
+     // 更新前先停下本应用持有的 Harness 服务：安装器在安装时会强杀桌面端进程
+     // （CheckIfAppIsRunning → taskkill），跳过正常退出路径的 stop_on_exit，导致
+     // Harness 子进程变成孤儿继续占用配置端口。若此刻不提前停掉，更新后新实例
+--- a/src-tauri/src/service/update/pending.rs
++++ b/src-tauri/src/service/update/pending.rs
+@@ -71,6 +71,7 @@
+ /// 同步、不触网：退出路径不能引入等待或网络请求，把安装包交给系统默认处理器
+ /// 启动即可（Windows 会触发 UAC，macOS/Linux 交给各自的系统安装流程）。
+ pub fn launch_pending_installer(app_handle: &AppHandle) {
++    if crate::managed::enabled() {return;}
+     let Some(pending) = get(app_handle) else {
+         return;
+     };
+--- a/src-tauri/src/service/workflow/install.rs
++++ b/src-tauri/src/service/workflow/install.rs
+@@ -17,6 +17,7 @@
+     app_handle: &tauri::AppHandle,
+     mut dsh_latest: Option<download::LatestDshPkg>,
+ ) -> Result<bool, String> {
++    if crate::managed::enabled() {return Err("Runtime replacement requires a certified WhaleRealm deployment".into());}
+     log::info!("Starting installation process");
+     // dsh 任务实际下载解压时置 true
+     let mut dsh_updated = false;
+--- a/src-tauri/src/service/workflow/launch.rs
++++ b/src-tauri/src/service/workflow/launch.rs
+@@ -47,12 +47,19 @@
+ const PORT_RELEASE_WAIT: std::time::Duration = std::time::Duration::from_millis(1500);
+ 
+ fn build_harness_args(dsh_binary: &Path, profile: &str, port: u16, heap_mb: Option<u32>) -> Vec<OsString> {
+-    let mut args = Vec::with_capacity(7);
++    let mut args = Vec::with_capacity(9);
+     args.extend(super::heap::heap_option_arg(heap_mb));
+     args.extend([
+         dsh_binary.as_os_str().to_os_string(),
+         OsString::from("--profile"),
+         OsString::from(profile),
++        // The dsh launcher owns only --profile/--patch/--dump-*; the first token it
++        // does not recognise starts the inner app arguments (see @deepseek-ai/dsh/args,
++        // passThroughOptions + enablePositionalOptions). --patch must precede
++        // --port/--no-open, otherwise it is handed verbatim to the booted app, which
++        // rejects it as an unknown option.
++        OsString::from("--patch"),
++        crate::managed::path("data/dsh-home/managed-desktop.patch.yml").into_os_string(),
+         OsString::from("--port"),
+         OsString::from(port.to_string()),
+         OsString::from("--no-open"),
+@@ -312,7 +319,7 @@
+     // 一路漂移，表现为“端口持续累加 + 首次启动超时、刷新后恢复”）。先留出
+     // 窗口等配置端口回落为空闲，再决定是否真的逐级递增。
+     wait_for_port_release(setting.port).await;
+-    let available_port = find_available_port(setting.port)?;
++    let available_port = if crate::managed::enabled() { if is_port_in_use(setting.port) {return Err("Managed reserved port occupied".into());} setting.port } else {find_available_port(setting.port)?};
+     if available_port != setting.port {
+         log::info!(
+             "Harness port changed from {} to {} because the configured port is occupied",
+@@ -449,6 +456,13 @@
+     // 前端做幂等补丁。最佳努力且幂等：锚点缺失（上游改写布局）时安全跳过。
+     if let Err(e) = crate::service::patch::plugin_visibility::apply(&app_handle) {
+         log::warn!("plugin visibility patch failed: {e}");
++    }
++    // 桌面载体鉴权补丁：随行核心把内置 Web 门禁在「每进程启动 token」之后，而无 token
++    // 的内嵌 iframe 与 `is_dsh_running` 的就绪探测都需要裸 `GET /`。补齐上游缺失的
++    // 「桌面端鉴权补丁」，让本地载体免 token 访问（信任边界见 service::patch::browser_auth）。
++    // 最佳努力且幂等：目标已打过或锚点缺失时安全跳过。
++    if let Err(e) = crate::service::patch::browser_auth::apply(&app_handle) {
++        log::warn!("browser auth carrier patch failed: {e}");
+     }
+     mark_phase("core_patches", &mut phase_started);
+     // 预防性处理：pnpm 在无 TTY 环境（dsh-market 等子进程）下重装/更新插件时，
+--- a/src-tauri/src/service/workflow/process.rs
++++ b/src-tauri/src/service/workflow/process.rs
+@@ -504,6 +504,7 @@
+ /// Windows 只结束入口路径精确匹配且父进程已退出的 node 服务；仍由另一个桌面实例
+ /// 持有的服务不做清扫。Unix 保持原有 release 路径匹配行为。
+ pub fn terminate_stale_harness_processes(app_handle: &tauri::AppHandle) {
++    if crate::managed::enabled() {return;}
+     #[cfg(windows)]
+     terminate_stale_harness_processes_at(&config::get_dsh_binary_path(app_handle));
+     #[cfg(not(windows))]
+--- a/src-tauri/src/service/workflow/status.rs
++++ b/src-tauri/src/service/workflow/status.rs
+@@ -19,6 +19,7 @@
+ }
+ 
+ pub fn set_status(status: Status) {
++    if status==Status::Running {crate::managed::ready();}
+     // 中毒安全：忽略此前 panic 造成的锁中毒，避免连锁 panic 导致进程退出
+     *get_status_lock().lock().unwrap_or_else(|e| e.into_inner()) = status;
+ }
+--- a/src-tauri/src/service/workflow/sweep.rs
++++ b/src-tauri/src/service/workflow/sweep.rs
+@@ -32,6 +32,7 @@
+ /// - 其余情况（标记不可解析、端口被其他程序占用、无法探测占用者）一律不动，
+ ///   绝不凭端口猜进程、绝不杀未知进程。
+ pub fn sweep_orphan_harness(app_handle: &tauri::AppHandle) {
++    if crate::managed::enabled() {return;}
+     if has_owned_process() {
+         return;
+     }
+--- a/src-tauri/tauri.conf.json
++++ b/src-tauri/tauri.conf.json
+@@ -2,7 +2,7 @@
+   "$schema": "https://schema.tauri.app/config/2",
+   "productName": "Deepseek Harness Desktop",
+   "version": "0.21.0",
+-  "identifier": "dsh-tauri",
++  "identifier": "com.whalerealm.community",
+   "build": {
+     "beforeDevCommand": "pnpm dev",
+     "devUrl": "http://localhost:1420",
+@@ -16,21 +16,9 @@
+       "devCsp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1421 http://127.0.0.1:*; img-src 'self' asset: http://asset.localhost data: blob: https://*.githubusercontent.com; media-src 'self' data: blob: https://*.githubusercontent.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; frame-src http://127.0.0.1:*"
+     }
+   },
+-  "plugins": {
+-    "deep-link": {
+-      "desktop": {
+-        "schemes": ["dsh"]
+-      }
+-    },
+-    "notifications": {
+-      "windows": {
+-        "toastActivatorClsid": "4FBB68DF-E119-4FBB-82D5-FA10F85B519B",
+-        "iconPath": "icons/32x32.png"
+-      }
+-    }
+-  },
++  "plugins": {},
+   "bundle": {
+-    "active": true,
++    "active": false,
+     "targets": "all",
+     "icon": [
+       "icons/32x32.png",
+@@ -40,7 +28,10 @@
+       "icons/icon.ico",
+       "icons/icon.png"
+     ],
+-    "resources": ["resources/**/*", "icons/32x32.png"],
++    "resources": [
++      "resources/**/*",
++      "icons/32x32.png"
++    ],
+     "licenseFile": "licenses/INSTALLER-LICENSE.txt",
+     "category": "DeveloperTool",
+     "copyright": "Copyright © 2026 Deepseek Harness Desktop contributors",
+@@ -53,14 +44,22 @@
+     "windows": {
+       "nsis": {
+         "template": "templates/installer.nsi",
+-        "languages": ["English", "SimpChinese"],
++        "languages": [
++          "English",
++          "SimpChinese"
++        ],
+         "displayLanguageSelector": false,
+         "installerIcon": "icons/icon.ico",
+         "uninstallerIcon": "icons/icon.ico"
+       },
+       "wix": {
+-        "language": ["en-US", "zh-CN"],
+-        "fragmentPaths": ["./windows/fragments/autostart-cleanup.wxs"]
++        "language": [
++          "en-US",
++          "zh-CN"
++        ],
++        "fragmentPaths": [
++          "./windows/fragments/autostart-cleanup.wxs"
++        ]
+       }
+     },
+     "shortDescription": "Desktop application for DeepSeek Harness",

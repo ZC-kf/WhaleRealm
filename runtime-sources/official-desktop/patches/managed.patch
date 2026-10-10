@@ -1,0 +1,282 @@
+--- a/apps/desktop-host/src/index.ts
++++ b/apps/desktop-host/src/index.ts
+@@ -23,8 +23,8 @@
+     environment: loadLayeredEnv('dsh'),
+     profile: 'desktop',
+     resolvedProfile: { profile, installAnchor },
+-    patchFiles: [],
+-    args: ['--no-open', '--port', '19387'],
++    patchFiles: [join(resolveDshHome(), 'managed-desktop.patch.yml')],
++    args: ['--no-open', '--port', process.env.WR_INSTANCE_PORT!],
+     ...(process.argv[5] === undefined ? {} : {
+       packageManager: {
+         command: process.execPath,
+--- a/apps/desktop/scripts/patches/koffi@3.3.2.patch
++++ b/apps/desktop/scripts/patches/koffi@3.3.2.patch
+@@ -0,0 +1,60 @@
++diff --git a/cnoke.cjs b/cnoke.cjs
++index 5a5eb82ae713126e157a0a96c9cee9c247f1ce9f..a6c242671253384cc916f7ef2553219b1ddf7325 100644
++--- a/cnoke.cjs
+++++ b/cnoke.cjs
++@@ -495,12 +495,12 @@ function Builder(config = {}) {
++       args.push(`-DNODE_JS_SOURCES=${work_dir}/win_delay_hook.c`);
++     }
++     if (process.platform != "win32" || mingw) {
++-      if ((0, import_node_child_process.spawnSync)("ninja", ["--version"]).status === 0) {
+++      if ((0, import_node_child_process.spawnSync)("ninja", ["--version"], { stdio: ["ignore", "pipe", "pipe"] }).status === 0) {
++         args.push("-G", "Ninja");
++       } else if (process.platform == "win32") {
++         args.push("-G", "MinGW Makefiles");
++       }
++-      if (config.ccache && (0, import_node_child_process.spawnSync)("ccache", ["--version"]).status === 0) {
+++      if (config.ccache && (0, import_node_child_process.spawnSync)("ccache", ["--version"], { stdio: ["ignore", "pipe", "pipe"] }).status === 0) {
++         args.push("-DCMAKE_C_COMPILER_LAUNCHER=ccache");
++         args.push("-DCMAKE_CXX_COMPILER_LAUNCHER=ccache");
++       }
++@@ -522,7 +522,7 @@ function Builder(config = {}) {
++       args.push(`-D${define}`);
++     args.push("--no-warn-unused-cli");
++     console.log(">> Running configuration");
++-    let proc = (0, import_node_child_process.spawnSync)(cmake_bin, args, { cwd: work_dir, stdio: "inherit" });
+++    let proc = (0, import_node_child_process.spawnSync)(cmake_bin, args, { cwd: work_dir, stdio: ["ignore", "inherit", "inherit"] });
++     if (proc.status !== 0) {
++       unlinkRecursive(work_dir);
++       if (retry)
++@@ -556,14 +556,14 @@ function Builder(config = {}) {
++     for (let target of targets)
++       args.push("--target", target);
++     console.log(">> Running build");
++-    let proc = (0, import_node_child_process.spawnSync)(cmake_bin, args, { stdio: "inherit" });
+++    let proc = (0, import_node_child_process.spawnSync)(cmake_bin, args, { stdio: ["ignore", "inherit", "inherit"] });
++     if (proc.status !== 0)
++       throw new Error("Failed to run build step");
++     console.log(">> Copy target files");
++     syncFiles(output_dir, build_dir);
++   };
++   async function checkPrebuild() {
++-    let proc = (0, import_node_child_process.spawnSync)(process.execPath, ["-e", "require(process.argv[1])", package_dir]);
+++    let proc = (0, import_node_child_process.spawnSync)(process.execPath, ["-e", "require(process.argv[1])", package_dir], { stdio: ["ignore", "pipe", "pipe"] });
++     return proc.status === 0;
++   }
++   this.clean = function() {
++@@ -608,12 +608,12 @@ function Builder(config = {}) {
++     if (!import_node_fs3.default.existsSync(project_dir + "/CMakeLists.txt"))
++       throw new Error("This directory does not appear to have a CMakeLists.txt file");
++     {
++-      let proc = (0, import_node_child_process.spawnSync)("cmake", ["--version"]);
+++      let proc = (0, import_node_child_process.spawnSync)("cmake", ["--version"], { stdio: ["ignore", "pipe", "pipe"] });
++       if (proc.status === 0) {
++         cmake_bin = "cmake";
++       } else {
++         if (process.platform == "win32") {
++-          let proc2 = (0, import_node_child_process.spawnSync)("reg", ["query", "HKEY_LOCAL_MACHINE\\SOFTWARE\\Kitware\\CMake", "/v", "InstallDir"]);
+++          let proc2 = (0, import_node_child_process.spawnSync)("reg", ["query", "HKEY_LOCAL_MACHINE\\SOFTWARE\\Kitware\\CMake", "/v", "InstallDir"], { stdio: ["ignore", "pipe", "pipe"] });
++           if (proc2.status === 0) {
++             let matches = proc2.stdout.toString("utf-8").match(/InstallDir[ \t]+REG_[A-Z_]+[ \t]+(.*)+/);
++             if (matches != null) {
+--- a/apps/desktop/scripts/prepare-dsh.ts
++++ b/apps/desktop/scripts/prepare-dsh.ts
+@@ -79,7 +79,12 @@
+       '--expose-internals',
+       PNPM,
+       `--config.registry=${registry}`,
+-      `--config.store-dir=${STORE_ROOT}`,
++      `--config.store-dir=${process.env.WR_PNPM_STORE ?? STORE_ROOT}`,
++      `--config.cache-dir=${process.env.WR_PNPM_CACHE ?? join(PNPM_BUILD_STATE, 'cache')}`,
++      // WhaleRealm offline build: nested installs must reuse the prepared store and
++      // metadata cache instead of retrying registry requests over the network.
++      '--config.offline=true',
++      '--config.verify-deps-before-run=false',
+       '--config.enable-global-virtual-store=false',
+       `--config.userconfig=${userConfig}`,
+       command,
+@@ -121,6 +126,14 @@
+       copyFileSync(join(PACKAGE_SET_ROOT, DESKTOP_PACKAGE_SET_FILE), join(BUILD_ROOT, DESKTOP_PACKAGE_SET_FILE))
+       cpSync(join(PACKAGE_SET_ROOT, DESKTOP_PACKAGES_DIR), join(BUILD_ROOT, DESKTOP_PACKAGES_DIR), { recursive: true })
+       createRuntimeProjectMetadata(BUILD_ROOT, release)
++      // WhaleRealm offline build: koffi's cnoke build driver probes CMake and prebuilt
++      // binaries with default-stdio spawnSync calls, which the build sandbox rejects
++      // with EBUSY whenever stdin is a pipe. The committed pnpm patch gives every
++      // spawnSync site an stdin-ignored stdio so the native build matches upstream CI.
++      mkdirSync(join(BUILD_ROOT, 'patches'), { recursive: true })
++      copyFileSync(join(APP_ROOT, 'scripts', 'patches', 'koffi@3.3.2.patch'), join(BUILD_ROOT, 'patches', 'koffi@3.3.2.patch'))
++      const runtimeWorkspace = join(BUILD_ROOT, 'pnpm-workspace.yaml')
++      writeFileSync(runtimeWorkspace, `${readFileSync(runtimeWorkspace, 'utf8')}patchedDependencies:\n  'koffi@3.3.2': patches/koffi@3.3.2.patch\n`)
+     })
+     await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:lockfile', () => runPnpm(['install', '--lockfile-only']))
+     verifyDesktopCoreLockfile(
+@@ -158,7 +171,7 @@
+       await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'sign:primary-native', () => signMacOSRuntime(join(RUNTIME_ROOT, 'primary-runtime'), resolveDesktopAppId(process.env), resolveMacOSSigningEnvironment(process.env), join(BUILD_PATHS.root, 'signature-cache')))
+     }
+     await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:manifests', () => prepareRuntimeManifests(DSH_OUTPUT_ROOT))
+-    await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:primary-smoke', async () => smokePrimaryRuntime(join(RUNTIME_ROOT, 'primary-runtime')))
++    if (!process.argv.includes('--defer-runtime-smoke')) await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:primary-smoke', async () => smokePrimaryRuntime(join(RUNTIME_ROOT, 'primary-runtime')))
+     await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:write-descriptor', async () => writeDesktopRuntime(DSH_OUTPUT_ROOT, release, packageSet.packages.map(entry => entry.name), target))
+     const descriptor = await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:verify-before-smoke', () => verifyDesktopRuntime(DSH_OUTPUT_ROOT, release.version, target))
+     if (!process.argv.includes('--defer-runtime-smoke')) {
+--- a/apps/desktop/scripts/prepare-runtime.ts
++++ b/apps/desktop/scripts/prepare-runtime.ts
+@@ -34,12 +34,15 @@
+   const require = createRequire(import.meta.url)
+   const { version } = require('electron/package.json') as { version: string }
+   const archive = await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'download:electron',
+-    () => downloadArtifact({ version, platform, arch, artifactName: 'electron', cacheRoot: BUILD_PATHS.downloads }))
++    () => Promise.resolve(process.env.WR_ELECTRON_ARCHIVE ?? downloadArtifact({ version, platform, arch, artifactName: 'electron', cacheRoot: BUILD_PATHS.downloads })))
+   rmSync(BUILD_PATHS.electron, { recursive: true, force: true })
+   await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'extract:electron', () => extractZip(archive, { dir: BUILD_PATHS.electron }))
+   const executable = join(BUILD_PATHS.electron, platform === 'win32' ? 'electron.exe' : 'Electron.app/Contents/MacOS/Electron')
++  // The build sandbox rejects child processes created with a piped standard input
++  // (EBUSY); the version probe reads nothing from stdin, so detach it.
+   const nodeVersion = execFileSync(executable, ['-p', 'process.versions.node'], {
+     encoding: 'utf8', env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
++    stdio: ['ignore', 'pipe', 'pipe'],
+   }).trim()
+   rmSync(RUNTIME_ROOT, { recursive: true, force: true })
+   mkdirSync(RUNTIME_ROOT, { recursive: true })
+--- a/apps/desktop/src/main.ts
++++ b/apps/desktop/src/main.ts
+@@ -1,3 +1,4 @@
++import { managedReady } from './managed.ts'
+ import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
+ /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
+ 
+@@ -323,6 +324,7 @@
+         const ready = await host.start()
+         hostCookie = await authenticateWebHost(ready.url)
+         hostUrl = ready.url
++        managedReady(ready.url)
+         if (ready.injections === undefined) throw new Error('Desktop Host did not provide boot injections')
+         injections = ready.injections
+         welcomeBackend = await connectDesktopWelcome(ready.url, (input, init) => net.fetch(input, init), async () => (await session.defaultSession.cookies.get({ url: ready.url })).map(cookie => `${cookie.name}=${cookie.value}`).join('; '))
+@@ -948,7 +950,7 @@
+     window.focus()
+   }
+ 
+-  if (app.isPackaged || process.env.DSH_DESKTOP_DEV_APP === '1') app.setAsDefaultProtocolClient('dsh')
++  // Managed distributions never register a global protocol handler.
+   app.on('open-url', (event, url) => {
+     event.preventDefault()
+     if (url === 'dsh://open' || url === 'dsh://open/') focusPrimaryWindow()
+@@ -984,11 +986,7 @@
+   mainWindow = createMainWindow()
+   const manifest: unknown = JSON.parse(await readFile(join(app.getAppPath(), 'package.json'), 'utf8'))
+   if (typeof manifest !== 'object' || manifest === null) throw new Error('desktop policy: invalid application manifest')
+-  const developmentPolicy = app.isPackaged ? undefined : process.env.DSH_DESKTOP_MANDATORY_UPDATE_CONFIG
+-  const policyInput: unknown = app.isPackaged
+-    ? ('dshMandatoryUpdatePolicy' in manifest ? manifest.dshMandatoryUpdatePolicy : undefined)
+-    : developmentPolicy === undefined ? undefined : JSON.parse(developmentPolicy) as unknown
+-  const policyConfig = resolveDesktopPolicyConfig(policyInput, !app.isPackaged)
++  const policyConfig = resolveDesktopPolicyConfig(undefined, true) // Managed updates belong to WhaleRealm.
+   if (policyConfig !== undefined) {
+     if (policyConfig.authentication === 'feishu-test') {
+       policyAuth = new DesktopPolicyTestAuth(policyConfig.origin, policyConfig.allowedAuthOrigins, locale,
+--- a/apps/desktop/src/managed.ts
++++ b/apps/desktop/src/managed.ts
+@@ -0,0 +1,30 @@
++/* WhaleRealm Copyright (C) 2026 凛枫. SPDX-License-Identifier: GPL-3.0-or-later */
++import { app } from 'electron'
++import { lstatSync, realpathSync, writeFileSync, renameSync } from 'node:fs'
++import { isAbsolute, join, dirname } from 'node:path'
++const env = process.env
++function required(name: string): string { const value=env[name]; if(!value) throw new Error(`Managed Desktop requires ${name}`); return value }
++export const managedId=required('WR_INSTANCE_ID')
++export const managedRoot=required('WR_INSTANCE_ROOT')
++export const managedNonce=required('WR_LAUNCH_NONCE')
++export const managedPort=Number(required('WR_INSTANCE_PORT'))
++if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/.test(managedId) || !/^[a-f0-9]{64}$/.test(managedNonce) || !Number.isSafeInteger(managedPort) || managedPort<1024 || managedPort>65535 || managedPort===3080 || !isAbsolute(managedRoot)) throw new Error('Invalid managed identity')
++for (const rel of ['', 'data/dsh-home','data/electron-user-data','workspace','logs','cache','cache/home','cache/app-data','cache/local-app-data','cache/temp']) {
++ const target=join(managedRoot,rel)
++ for(let p=target;;p=dirname(p)){if(lstatSync(p).isSymbolicLink())throw new Error('Linked managed path');if(dirname(p)===p)break}
++ if(realpathSync(target).toLowerCase()!==target.toLowerCase()) throw new Error('Noncanonical managed path')
++}
++for(const [key,rel] of Object.entries({DSH_HOME:'data/dsh-home',DSH_DESKTOP_USER_DATA:'data/electron-user-data',HOME:'cache/home',USERPROFILE:'cache/home',APPDATA:'cache/app-data',LOCALAPPDATA:'cache/local-app-data',TEMP:'cache/temp',TMP:'cache/temp'})) {
++ if(env[key]!==join(managedRoot,rel))throw new Error(`Invalid private ${key}`)
++}
++app.setPath('userData',join(managedRoot,'data/electron-user-data'))
++app.setPath('sessionData',join(managedRoot,'data/electron-user-data'))
++app.setPath('logs',join(managedRoot,'logs'))
++app.setPath('crashDumps',join(managedRoot,'cache','crashes'))
++app.setAppUserModelId(`com.whalerealm.official.${managedId}`)
++export function managedReady(url: string): void {
++ if(new URL(url).port!==String(managedPort))throw new Error('Managed host changed reserved port')
++ const file=join(managedRoot,'logs',`ready-${managedNonce}.json`)
++ writeFileSync(file+'.tmp',JSON.stringify({id:managedId,nonce:managedNonce,port:managedPort,url}))
++ renameSync(file+'.tmp',file)
++}
+--- a/apps/desktop/src/update-coordinator.ts
++++ b/apps/desktop/src/update-coordinator.ts
+@@ -82,12 +82,15 @@
+    * @returns The check result, including a silent automatic failure when applicable.
+    */
+   async check(manual = false): Promise<DesktopUpdateState> {
++    throw new Error("Managed Desktop updates require a certified WhaleRealm deployment")
+     this.assertLive()
+     if (this.downloadOperation !== undefined || this.installOperation !== undefined || this.downloaded) return this.current
+     if (!manual && this.current.phase === 'error' && this.current.failedOperation === 'download') return this.current
+     this.checkOperation ??= Promise.resolve().then(() => this.doCheck())
+       .finally(() => { this.checkOperation = undefined })
+-    const result = await this.checkOperation
++    // Unreachable under managed distribution: flow analysis is disabled in dead code,
++    // so the assignment narrowing above is unavailable and the assertions are needed.
++    const result = await this.checkOperation!
+     if (manual && result.phase === 'error') this.setState(result)
+     return result
+   }
+@@ -97,6 +100,7 @@
+    * @returns Download readiness or failure, without authorizing installation.
+    */
+   async download(version: string): Promise<DesktopUpdateState> {
++    throw new Error("Managed Desktop updates require a certified WhaleRealm deployment")
+     this.assertLive()
+     if (this.downloaded || this.installOperation !== undefined) return this.current
+     this.downloadOperation ??= Promise.resolve().then(async () => {
+@@ -114,7 +118,7 @@
+         return this.setState(this.failure(error, 'download'))
+       }
+     }).finally(() => { this.downloadOperation = undefined })
+-    return this.downloadOperation
++    return this.downloadOperation!
+   }
+ 
+   /**
+@@ -123,6 +127,7 @@
+    * @returns Installation handoff or a recoverable preparation error.
+    */
+   async install(version: string): Promise<DesktopUpdateState> {
++    throw new Error("Managed Desktop updates require a certified WhaleRealm deployment")
+     this.assertLive()
+     if (!this.downloaded || this.downloadOperation !== undefined || version !== this.candidate) throw new Error('desktop update: confirmed target is not ready')
+     this.installOperation ??= Promise.resolve().then(async () => {
+@@ -137,7 +142,7 @@
+         return this.setState(this.failure(error, 'install'))
+       }
+     }).finally(() => { this.installOperation = undefined })
+-    return this.installOperation
++    return this.installOperation!
+   }
+ 
+   /** Remove owned listeners and prevent pending library operations from publishing into closed UI. */
+--- a/apps/desktop/src/update-schedule.ts
++++ b/apps/desktop/src/update-schedule.ts
+@@ -63,8 +63,11 @@
+    * @returns Current state when not due, otherwise the coordinator result. Disposal rejects new work.
+    */
+   async check(manual = false, force = manual): Promise<DesktopUpdateState> {
++    return this.updates.state // Managed distribution: no feed timers or network calls.
++    // The polling machinery below stays in place for certified deployments. Flow analysis
++    // is disabled in unreachable code, so the assignment narrowings need assertions.
+     if (this.disposed) throw new Error('desktop update: polling is disposed')
+-    if (this.pending !== undefined && !manual) return this.pending
++    if (this.pending !== undefined && !manual) return this.pending!
+     if (!force && this.now() < this.nextCheck) return this.updates.state
+     clearTimeout(this.timer)
+     this.timer = undefined
+@@ -79,7 +82,7 @@
+       },
+       (error: unknown) => { this.complete(true); throw error },
+     )
+-    return this.pending
++    return this.pending!
+   }
+ 
+   /** Stop timers and prevent late completion from rearming; the coordinator owns pending network teardown. */

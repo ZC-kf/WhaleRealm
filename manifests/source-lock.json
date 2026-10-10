@@ -1,0 +1,46 @@
+{
+  "schema": "dsh-hub.source-lock.v1",
+  "generatedAt": "2026-09-22T08:12:00Z",
+  "hub": {
+    "repository": "https://github.com/rirko/dsh-melody-launcher.git",
+    "ref": "main",
+    "archive": "D:\\Dsh-Hub-HIDM\\hub-archives\\dsh-melody-launcher-main.tar.gz",
+    "archiveSha256": "143cb1a08719dd4701a8ef26dfabd67b0459a303fe19bb769d4186f8ca95c4c6",
+    "sourcePath": "D:\\Dsh-Hub-HIDM\\hub",
+    "role": "Electron React Hub UI reference and fork base",
+    "gitClone": "unavailable: direct git/codeload failed with curl 28; archive acquired through GitHub API"
+  },
+  "officialDesktop": {
+    "repository": "https://github.com/deepseek-ai/deepseek-harness.git",
+    "commit": "c36a83ff6bb95e3f82cf79f9be7c724270a8aa61",
+    "version": "0.1.7-alpha.1",
+    "archive": "D:\\Dsh-Hub-HIDM\\hub-archives\\deepseek-harness-c36a83ff.tar.gz",
+    "archiveSha256": "bb91bc6b02d76b90a930a799de7e2cac1ea6bf81bba84cb5a2889ed1c2e59738",
+    "sourcePath": "D:\\Dsh-Hub-HIDM\\upstream\\deepseek-harness",
+    "appsDesktop": true,
+    "appsDesktopHost": true,
+    "role": "official Electron Desktop runner source",
+    "gitClone": "unavailable: direct git/codeload failed with curl 28; archive acquired through GitHub API"
+  },
+  "localReferences": {
+    "officialCliOld": {
+      "path": "D:\\deepseek-harness",
+      "commit": "d347e703908d0406b7a7ef80e3a0e594d86b2215",
+      "version": "0.1.3-alpha.1",
+      "appsDesktop": false,
+      "role": "existing CLI/Web source reference only"
+    },
+    "downstreamElectron": {
+      "path": "D:\\DSH-Desktop-source-audit",
+      "commit": "19ce3fbd04faa334d27f7b9d84c9740d39d3625d",
+      "remote": "https://github.com/cherrchen/deepseek-harness-electron.git",
+      "role": "downstream historical Electron reference only"
+    }
+  },
+  "runtime": {
+    "node": "^22.19.0 || >=24.0.0",
+    "pnpm": "11.7.0",
+    "officialDesktopPortDefault": 19387,
+    "hubInstancePortRange": [19391, 19490]
+  }
+}

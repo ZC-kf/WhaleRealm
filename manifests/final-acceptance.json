@@ -1,0 +1,93 @@
+﻿{
+    "schema":  "dsh-hub.final-acceptance.v1",
+    "generatedAt":  "2026-09-23T15:28:46.1426575Z",
+    "hubExecutable":  {
+                          "path":  "D:\\Dsh-Hub-HIDM\\hub\\release\\win-unpacked\\DSH Launcher.exe",
+                          "bytes":  239076352,
+                          "sha256":  "5dece2ea23a2acf0242fa7b0d727a104b6f6f186285202719bd7e5cc08dd2f2a",
+                          "builtAt":  "2026-09-23T23:42:36"
+                      },
+    "backToLauncher":  {
+                           "fixed":  true,
+                           "verifiedBy":  "scripts/cdp-verify-back-button.cjs",
+                           "verdict":  "PASS",
+                           "detail":  "labelled BUTTON 112x30px text=返回启动页 inside manager surface; corner triangle preserved; click returned to launcher surface"
+                       },
+    "firstRunGuide":  {
+                          "implemented":  true,
+                          "verifiedBy":  "scripts/cdp-verify-ui-features.cjs + CDP dismissal test",
+                          "steps":  8,
+                          "autoShowsOnFirstRun":  true,
+                          "reopenableViaPersistentButton":  true,
+                          "dismissalPersistsAcrossReload":  true,
+                          "storageKey":  "dsh-launcher:first-run-guide",
+                          "requiredTopicsCovered":  [
+                                                        "create-instance",
+                                                        "start",
+                                                        "port-and-state-roots",
+                                                        "stop",
+                                                        "tray-exit",
+                                                        "back-to-launcher"
+                                                    ],
+                          "toggleLocation":  "checkbox inside the guide plus a persistent reopen button, NOT inside SettingsDialog"
+                      },
+    "desktopInventoryView":  {
+                                 "implemented":  true,
+                                 "ipcChannel":  "instances:desktop-inventory",
+                                 "source":  "manifests/desktop-inventory.json",
+                                 "navLabel":  "本机 DSH 发行体",
+                                 "renderedTextLength":  4761,
+                                 "showsAllThreeDistributions":  true,
+                                 "showsSha256":  true,
+                                 "showsTierAndReason":  true,
+                                 "readFailure":  false
+                             },
+    "pluginMigration":  {
+                            "cyber":  {
+                                          "version":  "0.3.0",
+                                          "status":  "COMPATIBLE",
+                                          "installedOn":  [
+                                                              "gui-a",
+                                                              "sandbox",
+                                                              "daily"
+                                                          ],
+                                          "mountEvidence":  "per-instance audit.jsonl with event=plugin.load and dataDir inside that instance"
+                                      },
+                            "layeredMemory":  {
+                                                  "version":  "0.9.2",
+                                                  "status":  "INCOMPATIBLE",
+                                                  "detail":  "loads and writes \u003cdsh-home\u003e/memory but breaks Desktop boot: cannot create effect on inactive context; peers target ^0.1.2-alpha.1",
+                                                  "rolledBack":  true
+                                              }
+                        },
+    "liveDesktopArchiveGuard":  {
+                                    "dryRunExitCode":  1,
+                                    "fatalMessage":  "port 3080 is still served by PID 38308; close the live DSH desktop first",
+                                    "archiveNotCreated":  true,
+                                    "inUseGuardFindsProcesses":  5,
+                                    "negativeControlArchiveDirProcesses":  0
+                                },
+    "archivedAssets":  {
+                           "count":  7,
+                           "destination":  "D:\\Dsh-Hub-HIDM\\_archive",
+                           "verifiedBy":  "file count + total bytes + exe sha256 before/after",
+                           "recordFile":  "manifests/archive-moves.txt",
+                           "jsonRecordBroken":  "ConvertTo-Json throws Argument types do not match under PS 5.1; flat text record used instead"
+                       },
+    "stalePathAudit":  {
+                           "tool":  "scripts/audit-stale-paths.ps1",
+                           "totalHits":  66,
+                           "mustFix":  24,
+                           "frozen":  32,
+                           "byDesign":  10,
+                           "mustFixAllIn":  "manifests/desktop-inventory.json (resolved by its own archiveRelocation map)",
+                           "runtimeCriticalReferencesBroken":  0
+                       },
+    "liveInstanceUntouched":  {
+                                  "port":  3080,
+                                  "pid":  38308,
+                                  "dshHome":  "C:\\Users\\Lenovo\\.dsh",
+                                  "webProfilePackageJsonMtime":  "2026-09-20T23:44:08"
+                              }
+}
+

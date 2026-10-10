@@ -1,0 +1,9 @@
+﻿# dsh-hub archive moves (flat record; JSON serialisation is broken by a PS 5.1 ConvertTo-Json ArgumentException)
+# format: originalPath|archivedPath|files|bytes|movedAtUtc
+D:\deepseek-harness|D:\Dsh-Hub-HIDM\_archive\deepseek-harness|73758|1681998602|2026-09-08T10:26:54.4941485Z
+D:\deepseek-harness-desktop|D:\Dsh-Hub-HIDM\_archive\deepseek-harness-desktop|13125|521972667|2026-09-04T16:02:13.7514828Z
+D:\dsh-browser|D:\Dsh-Hub-HIDM\_archive\dsh-browser|29553|370049974|2026-09-09T05:00:53.8359691Z
+D:\dsh-browser-backups|D:\Dsh-Hub-HIDM\_archive\dsh-browser-backups|16|892600|2026-09-09T04:59:26.5268852Z
+D:\dsh-browser-baseline-652cca|D:\Dsh-Hub-HIDM\_archive\dsh-browser-baseline-652cca|30139|372868764|2026-09-09T05:04:33.0194640Z
+D:\DSH-Desktop-source-audit|D:\Dsh-Hub-HIDM\_archive\DSH-Desktop-source-audit|8316|76014069|2026-09-04T16:14:26.1408761Z
+D:\dsh-worktable|D:\Dsh-Hub-HIDM\_archive\dsh-worktable|1|453012|2026-09-04T16:08:55.3997604Z

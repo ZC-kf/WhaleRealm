@@ -1,0 +1,190 @@
+{
+  "schema": "dsh-hub.verification.v2",
+  "generatedAt": "2026-09-23T17:30:00+08:00",
+  "source": {
+    "officialRepository": "https://github.com/deepseek-ai/deepseek-harness.git",
+    "officialCommit": "c36a83ff6bb95e3f82cf79f9be7c724270a8aa61",
+    "officialVersion": "0.1.7-alpha.1",
+    "officialArchiveSha256": "bb91bc6b02d76b90a930a799de7e2cac1ea6bf81bba84cb5a2889ed1c2e59738"
+  },
+  "runner": {
+    "built": true,
+    "path": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1\\DeepSeek Harness.exe",
+    "executableSha256": "7c484b12eb490b74cad478b68bd4a057b91de376a6b470465f9679f9472f2453",
+    "executableBytes": 244465152,
+    "stagedFiles": 10337,
+    "unsigned": true,
+    "electron": "44.0.0",
+    "bundledNode": "24.18.1",
+    "bundledPnpm": "11.7.0",
+    "patchRecord": "manifests/runner-patches.json"
+  },
+  "twoInstanceRuntimeAcceptance": {
+    "evidenceFile": "manifests/two-instance-smoke.json",
+    "driver": "scripts/smoke-driver.ts (uses the Hub's own instance-registry, instance-env, official-runner and skill-registry modules)",
+    "verifierCommand": "scripts\\verify-instance-isolation.ps1 -Evidence manifests\\two-instance-smoke.json",
+    "verifierExit": 0,
+    "instances": [
+      {
+        "id": "smoke-a",
+        "rootPid": 24472,
+        "port": 19391,
+        "portListenerPid": 25208,
+        "listenerInsideInstanceTree": true,
+        "visibleDesktopWindow": "Chrome_WidgetWin_1 title='DeepSeek Harness'",
+        "dshHome": "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\dsh-home",
+        "userData": "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\electron-user-data",
+        "desktopProfile": "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\dsh-home\\profiles\\desktop",
+        "lockName": "dsh-desktop-smoke-a",
+        "skillPath": "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\dsh-home\\skills\\smoke-probe",
+        "userDataFiles": 58,
+        "desktopProfileFiles": 4,
+        "skillFiles": 1,
+        "hostHttp": "GET http://127.0.0.1:19391/ -> 401 (host serving, web-host auth required)"
+      },
+      {
+        "id": "smoke-b",
+        "rootPid": 14836,
+        "port": 19392,
+        "portListenerPid": 27796,
+        "listenerInsideInstanceTree": true,
+        "visibleDesktopWindow": "Chrome_WidgetWin_1 title='DeepSeek Harness'",
+        "dshHome": "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\dsh-home",
+        "userData": "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\electron-user-data",
+        "desktopProfile": "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\dsh-home\\profiles\\desktop",
+        "lockName": "dsh-desktop-smoke-b",
+        "skillPath": "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\dsh-home\\skills\\smoke-probe",
+        "userDataFiles": 58,
+        "desktopProfileFiles": 4,
+        "skillFiles": 1,
+        "hostHttp": "GET http://127.0.0.1:19392/ -> 401 (host serving, web-host auth required)"
+      }
+    ],
+    "distinct": { "roots": true, "ports": true, "locks": true, "skills": true, "pids": true },
+    "desktopProfileContents": ["cordis.yml", "cordis.patch.yml", "package.json", "pnpm-workspace.yaml"],
+    "parallelRuntime": "Both instances ran simultaneously, each with a 6-process tree and its own visible Desktop window.",
+    "shutdown": {
+      "mechanism": "stop flag -> RuntimeHandle.stop() (child.kill on the instance root)",
+      "observed": "All 12 process-tree PIDs across both instances exited; ports 19391 and 19392 released; driver exited 0."
+    }
+  },
+  "liveInstancePreserved": {
+    "url": "http://127.0.0.1:3080",
+    "ownerPid": 38308,
+    "listeningBeforeAndAfter": true,
+    "userDataPreferencesLastWrite": "2026-09-23T15:51:59 (unchanged by smoke runs)",
+    "mutated": false,
+    "note": "C:\\Users\\Lenovo\\.dsh and the live Electron userData were never written by the smoke instances."
+  },
+  "defectsFoundAndFixedByRuntimeEvidence": [
+    {
+      "id": "electron-run-as-node-leak",
+      "symptom": "Runner log: 'DeepSeek Harness.exe: bad option: --user-data-dir'; instances never started.",
+      "rootCause": "buildInstanceEnvironment spread process.env, inheriting ELECTRON_RUN_AS_NODE=1 from the Hub's own launch context, so the runner started as plain Node.",
+      "fix": "instance-env.ts now deletes inherited Electron node-mode variables; regression test added (RED observed: expected '1' to be undefined).",
+      "commit": "7b4b48f"
+    },
+    {
+      "id": "hidden-desktop-window",
+      "symptom": "Instances ran and served HTTP, but all Chrome_WidgetWin_1 windows were visible=False.",
+      "rootCause": "spawnOfficialDesktopRunner passed windowsHide:true, which sets STARTUPINFO SW_HIDE and Chromium creates its windows hidden.",
+      "fix": "windowsHide is now part of the launch spec and set to false; regression test added (RED observed: expected undefined to be false).",
+      "resultAfterFix": "2 visible 'DeepSeek Harness' windows, one per instance."
+    },
+    {
+      "id": "verifier-port-owner-too-strict",
+      "symptom": "Verifier failed with 'port 19391 is owned by PID 31480, not 33964' although isolation was correct.",
+      "rootCause": "The Desktop host listens from a child of the Electron main process, so equality with the recorded root PID is wrong.",
+      "fix": "Verifier now walks the listener's parent chain and requires the recorded instance PID to be an ancestor, keeping cross-instance ownership a failure."
+    }
+  ],
+  "contractTests": {
+    "hubFocused": { "files": 11, "tests": 20, "failed": 0, "typecheckExit": 0 },
+    "powershell": { "total": 10, "failed": 0, "processAncestry": 2, "isolationVerifier": 1, "rollback": 4, "stopHub": 1, "inventoryContract": 2 }
+  },
+  "hubShell": {
+    "packaged": true,
+    "executable": "D:\\Dsh-Hub-HIDM\\hub\\release\\win-unpacked\\DSH Launcher.exe",
+    "executableBytes": 239076352,
+    "executableSha256": "c088bb218357b40ffdd9b35de2680496f2e1f471ca850f6d0887e8b1e5b7aeb0",
+    "electron": "43.7.3",
+    "electronArchiveSha256": "b11a1bf50c1fc4eb8b9ca99cfbb557daab284d739b20f45c1b3b6ce9f673cb32",
+    "buildSteps": ["vite build (exit 0; dist 8 files, dist-electron/main.js 992.32 kB, preload.mjs 18.05 kB)", "electron-builder --win --x64 --dir --publish never (exit 0)"],
+    "configChange": "Removed the vestigial koffi extraResources entry: hub src/electron/tests contain zero koffi references, @koromix/koffi-win32-x64 is not installed, and koffi's cnoke --prebuild produced no build directory, so the entry could only fail packaging.",
+    "startStop": {
+      "startCommand": "scripts\\start-hub.ps1",
+      "startExit": 0,
+      "observedPid": 23644,
+      "processName": "DSH Launcher",
+      "visibleWindowTitle": "DSH Launcher",
+      "workingSetMb": 167.7,
+      "processTreeSize": 6,
+      "stopCommand": "scripts\\stop-hub.ps1",
+      "stopExit": 0,
+      "stopOutput": "Hub stopped (PID 23644); no Hub processes remain.",
+      "processesAfterStop": 0,
+      "idempotentSecondStop": "Hub is not running. (exit 0)",
+      "hubUserData": "C:\\Users\\Lenovo\\AppData\\Roaming\\dsh-launcher (51 files) - separate from the live instance's 'DeepSeek Harness' userData"
+    },
+    "defectsFoundAndFixed": [
+      "start-hub.ps1 and stop-hub.ps1 pointed at hub/release/DSH Launcher.exe, which the --dir build never produces; corrected to hub/release/win-unpacked/DSH Launcher.exe.",
+      "Neither script cleared an inherited ELECTRON_RUN_AS_NODE=1, which would have started the Hub as plain Node - the same defect class already fixed for the runner.",
+      "stop-hub.ps1 matched any process with the Hub executable path and could select a GPU/renderer child, then reported a false stop failure ('Hub PID 19756 did not exit within 10 seconds'). It now selects the root process (parent outside the candidate set), allows 45s, and fails if any Hub process survives.",
+      "stop-hub.ps1 contained 447 non-ASCII bytes without a BOM; PowerShell 5.1 mis-decoded it and the script aborted with a spurious '$candidates is not set' error. The two scripts with zero non-ASCII bytes never exhibited this, so .ps1 files are now kept ASCII-only."
+    ]
+  },
+  "hubIpcInstanceLifecycle": {
+    "method": "Packaged Hub launched with --remote-debugging-port=9333; scripts/cdp-instance-driver.cjs evaluated expressions in the real renderer (file:///.../app.asar/dist/index.html), so calls travelled window.launcher -> preload ipcRenderer.invoke -> main ipcMain handlers -> runtime supervisor -> official runner.",
+    "exposedApi": "window.launcher is an object exposing createInstance, listInstanceStates, listInstances, restartInstance, selectInstance, startInstance, stopInstance",
+    "registryPersistence": "listInstances returned smoke-a and smoke-b created by an earlier Hub process, proving hub-data/instances.json survives Hub restarts",
+    "created": [
+      { "id": "gui-a", "port": 19401, "lockName": "dsh-desktop-gui-a", "runtimeRoot": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1", "dshHome": "D:\\Dsh-Hub-HIDM\\instances\\gui-a\\dsh-home", "electronUserData": "D:\\Dsh-Hub-HIDM\\instances\\gui-a\\electron-user-data", "desktopProfile": "D:\\Dsh-Hub-HIDM\\instances\\gui-a\\dsh-home\\profiles\\desktop" },
+      { "id": "gui-b", "port": 19402, "lockName": "dsh-desktop-gui-b", "runtimeRoot": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1", "dshHome": "D:\\Dsh-Hub-HIDM\\instances\\gui-b\\dsh-home", "electronUserData": "D:\\Dsh-Hub-HIDM\\instances\\gui-b\\electron-user-data", "desktopProfile": "D:\\Dsh-Hub-HIDM\\instances\\gui-b\\dsh-home\\profiles\\desktop" }
+    ],
+    "hubReportedStates": [
+      { "instanceId": "gui-a", "status": "ready", "pid": 24672, "url": "http://127.0.0.1:19401" },
+      { "instanceId": "gui-b", "status": "ready", "pid": 19012, "url": "http://127.0.0.1:19402" }
+    ],
+    "liveProcessEvidence": {
+      "gui-a": { "rootPid": 24672, "processName": "DeepSeek Harness", "windowTitle": "DeepSeek Harness", "workingSetMb": 140.2, "port": 19401, "portOwnerPid": 20024, "portOwnerInsideRootTree": true, "userDataFiles": 58, "desktopProfileFiles": 4 },
+      "gui-b": { "rootPid": 19012, "processName": "DeepSeek Harness", "windowTitle": "DeepSeek Harness", "workingSetMb": 167.7, "port": 19402, "portOwnerPid": 32088, "portOwnerInsideRootTree": true, "userDataFiles": 58, "desktopProfileFiles": 4 }
+    },
+    "selectiveStop": {
+      "call": "window.launcher.stopInstance('gui-a')",
+      "returned": { "instanceId": "gui-a", "status": "stopped", "pid": null, "url": null },
+      "observed": "PID 24672 exited and port 19401 released while gui-b stayed ready on PID 19012 / port 19402 - stopping one instance does not disturb the other."
+    },
+    "hubQuitReclamation": {
+      "requirement": "Design spec: stopping the Hub must reclaim the process trees it registered.",
+      "observed": "stop-hub.ps1 exit 0 ('Hub stopped (PID 31720); no Hub processes remain.'); gui-b PID 19012 exited with the Hub and port 19402 was released; 0 DSH Launcher processes remained; the only surviving DeepSeek Harness processes were the 5 belonging to the pre-existing live instance."
+    },
+    "cdpEvaluateCaveat": "The two startInstance evaluations reported 'CDP timeout: Runtime.evaluate' in the driver, yet listInstanceStates returned status ready with real PIDs and URLs and the processes/ports were independently confirmed alive. The authoritative evidence is the Hub-reported state plus the OS-level checks, not the timed-out evaluate responses."
+  },
+  "remainingGaps": [
+    {
+      "area": "pixel-click-path",
+      "detail": "Instance lifecycle was driven through the packaged Hub's real renderer and IPC (window.launcher via CDP), not by physically clicking the InstanceSwitcher buttons. No browser/UI automation bridge was available for Electron pixel interaction.",
+      "effect": "The renderer-to-main contract is verified; the React onClick wiring itself was not clicked."
+    },
+    {
+      "area": "skill-seeding-via-ipc",
+      "detail": "gui-a and gui-b were created through the Hub's createInstance IPC, which does not seed Skills; Skill path isolation was proven on the smoke-a/smoke-b pair (distinct dsh-home/skills/smoke-probe paths, verifier exit 0). Skill seeding is a main-process module not yet exposed over IPC.",
+      "effect": "Per-instance Skill paths are verified, but not yet seedable from the Hub UI."
+    },
+    {
+      "area": "full-hub-test-suite",
+      "detail": "One legacy runtime test asserts port 3080 while the preserved live DSH service owns 3080 and the allocator correctly selects 3081.",
+      "effect": "Full suite is not green; the live service was deliberately not stopped to make it pass."
+    },
+    {
+      "area": "official-nested-packaging",
+      "detail": "'pnpm package:desktop:win:x64:unsigned' still aborts in prepare:dsh (pnpm exit 0x80000003, PostQueuedCompletionStatus 6) under deep process nesting; the identical command succeeds top-level. The runner was produced by running the official steps top-level.",
+      "effect": "Reproducible packaging requires a shell without the nested child-process restriction."
+    },
+    {
+      "area": "authenticated-desktop-session",
+      "detail": "Smoke instances were started without credentials and stopped at the official welcome window; post-login workspace entry, plugin install and Skill loading inside a live session were not exercised.",
+      "effect": "Desktop mode launch and isolation are verified; in-session plugin/Skill behaviour is not."
+    }
+  ]
+}

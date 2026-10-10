@@ -1,0 +1,103 @@
+﻿{
+    "schema":  "dsh-hub.migration.v1",
+    "generatedAt":  "2026-09-23T12:50:14.4689238Z",
+    "verified":  true,
+    "entries":  [
+                    {
+                        "sourceId":  "deepseek-harness",
+                        "destinationId":  "deepseek-harness",
+                        "source":  "D:\\deepseek-harness",
+                        "destination":  "D:\\Dsh-Hub-HIDM\\imports\\deepseek-harness",
+                        "relativePath":  "deepseek-harness",
+                        "sourceKind":  "source",
+                        "kind":  "directory",
+                        "bytes":  141396707,
+                        "sourceHash":  "79e2dc57abd25cc9ce8433494c24ed6d82de5859a85bdf487bc37f0ee7cc02c3",
+                        "destinationHash":  "79e2dc57abd25cc9ce8433494c24ed6d82de5859a85bdf487bc37f0ee7cc02c3"
+                    },
+                    {
+                        "sourceId":  "DSH-Desktop-source-audit",
+                        "destinationId":  "DSH-Desktop-source-audit",
+                        "source":  "D:\\DSH-Desktop-source-audit",
+                        "destination":  "D:\\Dsh-Hub-HIDM\\imports\\DSH-Desktop-source-audit",
+                        "relativePath":  "DSH-Desktop-source-audit",
+                        "sourceKind":  "source-audit",
+                        "kind":  "directory",
+                        "bytes":  55558233,
+                        "sourceHash":  "5c40f8e395fb230181062aec116c40243e5dd94e999eba47c15392a4611dc20d",
+                        "destinationHash":  "5c40f8e395fb230181062aec116c40243e5dd94e999eba47c15392a4611dc20d"
+                    },
+                    {
+                        "sourceId":  "DSH-Desktop",
+                        "destinationId":  "DSH-Desktop",
+                        "source":  "D:\\DSH-Desktop",
+                        "destination":  "D:\\Dsh-Hub-HIDM\\imports\\DSH-Desktop",
+                        "relativePath":  "DSH-Desktop",
+                        "sourceKind":  "runtime",
+                        "kind":  "directory",
+                        "bytes":  378070820,
+                        "sourceHash":  "419fd57da8bf05a92384ec0a4df57f634fb97e3d2d90fce951d05222ee9265b3",
+                        "destinationHash":  "419fd57da8bf05a92384ec0a4df57f634fb97e3d2d90fce951d05222ee9265b3"
+                    },
+                    {
+                        "sourceId":  "deepseek-harness-desktop",
+                        "destinationId":  "deepseek-harness-desktop",
+                        "source":  "D:\\deepseek-harness-desktop",
+                        "destination":  "D:\\Dsh-Hub-HIDM\\imports\\deepseek-harness-desktop",
+                        "relativePath":  "deepseek-harness-desktop",
+                        "sourceKind":  "runtime",
+                        "kind":  "directory",
+                        "bytes":  402616737,
+                        "sourceHash":  "77a1425867418ff67383cb4b5b6578f8c760d1a50527d86c1850d4d3dd78164b",
+                        "destinationHash":  "77a1425867418ff67383cb4b5b6578f8c760d1a50527d86c1850d4d3dd78164b"
+                    },
+                    {
+                        "sourceId":  "dsh-browser",
+                        "destinationId":  "dsh-browser",
+                        "source":  "D:\\dsh-browser",
+                        "destination":  "D:\\Dsh-Hub-HIDM\\imports\\dsh-browser",
+                        "relativePath":  "dsh-browser",
+                        "sourceKind":  "related-source",
+                        "kind":  "directory",
+                        "bytes":  3463306,
+                        "sourceHash":  "6c0a2d5713d7fa105c9dc2aee41940f0e245b282d3d1c179012817f507aa9599",
+                        "destinationHash":  "6c0a2d5713d7fa105c9dc2aee41940f0e245b282d3d1c179012817f507aa9599"
+                    },
+                    {
+                        "sourceId":  "dsh-browser-backups",
+                        "destinationId":  "dsh-browser-backups",
+                        "source":  "D:\\dsh-browser-backups",
+                        "destination":  "D:\\Dsh-Hub-HIDM\\imports\\dsh-browser-backups",
+                        "relativePath":  "dsh-browser-backups",
+                        "sourceKind":  "backup",
+                        "kind":  "directory",
+                        "bytes":  892600,
+                        "sourceHash":  "716a7acabea5ed782326a82ac77884f74be0d97f1c200310283413123b53db84",
+                        "destinationHash":  "716a7acabea5ed782326a82ac77884f74be0d97f1c200310283413123b53db84"
+                    },
+                    {
+                        "sourceId":  "dsh-browser-baseline-652cca",
+                        "destinationId":  "dsh-browser-baseline-652cca",
+                        "source":  "D:\\dsh-browser-baseline-652cca",
+                        "destination":  "D:\\Dsh-Hub-HIDM\\imports\\dsh-browser-baseline-652cca",
+                        "relativePath":  "dsh-browser-baseline-652cca",
+                        "sourceKind":  "backup",
+                        "kind":  "directory",
+                        "bytes":  3434185,
+                        "sourceHash":  "3bc26f483bc094664c407bc1c5a02912640ce35cb8d274efba15eb3d71d38c8d",
+                        "destinationHash":  "3bc26f483bc094664c407bc1c5a02912640ce35cb8d274efba15eb3d71d38c8d"
+                    },
+                    {
+                        "sourceId":  "dsh-worktable",
+                        "destinationId":  "dsh-worktable",
+                        "source":  "D:\\dsh-worktable",
+                        "destination":  "D:\\Dsh-Hub-HIDM\\imports\\dsh-worktable",
+                        "relativePath":  "dsh-worktable",
+                        "sourceKind":  "artifact",
+                        "kind":  "directory",
+                        "bytes":  453012,
+                        "sourceHash":  "4f79ccf7894811af7af622015006b867df2845dab5359f2e2edfd065a2c2571d",
+                        "destinationHash":  "4f79ccf7894811af7af622015006b867df2845dab5359f2e2edfd065a2c2571d"
+                    }
+                ]
+}

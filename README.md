@@ -1,72 +1,8 @@
-# 鲸域 · WhaleRealm
+﻿# DSH Desktop Instance HubThis directory is the central workspace for managing multiple official DeepSeek Harness Electron Desktop instances.## Current statusThe Hub contains instance path, port, lock, registry, supervisor, Skill seeding, migration snapshot, and fail-closed smoke contracts. The official Desktop runner is pinned to commit `c36a83ff6bb95e3f82cf79f9be7c724270a8aa61` (`0.1.7-alpha.1`).The official runner has not been claimed as built until a verified Windows artifact exists under `runtimes\0.1.7-alpha.1`. The current environment's official build probe timed out after 180 seconds, so two-instance runtime acceptance remains pending.## Safety boundary- The active installation at `D:\DSH-Desktop` and `C:\Users\Lenovo\.dsh` are not migrated or modified automatically.- Each managed instance must use a separate `instances\<id>\dsh-home`, Electron user data root, Desktop profile, workspace, logs, port, and lock name.- Smoke launch fails closed when the instance registry or official runner artifact is absent.- Migration rollback requires a verified manifest and explicit source/destination IDs.## Layout- `hub\`: Electron/React Hub source- `upstream\deepseek-harness\`: pinned official source- `runtimes\`: verified official Desktop artifacts, one version per directory- `instances\`: per-instance mutable state- `shared\skills\`: canonical read-only Skill source- `imports\`: copy-first migration imports- `manifests\`: source, migration, runtime, and smoke evidence- `scripts\`: inventory, staging, verification, startup, shutdown, smoke, and rollback scripts## Verification commands```powershellnode .\node_modules\vitest\vitest.mjs run tests\two-instance-smoke.test.tspowershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\smoke-two-instances.ps1 -First stable -Second betapowershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\verify-instance-isolation.ps1 -Evidence manifests\two-instance-smoke.json```The smoke command is expected to exit nonzero until both instances have a registered, verified official runner. Do not replace that failure with a community Web launcher or an unverified downstream Electron build.## Hub controls`start-hub.ps1` starts only a packaged Hub executable and sets Hub-owned environment variables. `stop-hub.ps1` requires an explicit process ID and refuses unrelated process names. `rollback-migration.ps1` copies a verified import back to an explicitly named D: source path; it never removes active C: DSH state.
+## License
 
-> 一鲸一域，一域一星海。
+The WhaleRealm software is licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later). See the LICENSE file for the full text.
 
-面向 DeepSeek Harness（DSH）的 Windows 本地多实例管理器，目标是让官方网页版、官方桌面版和社区桌面版独立部署、独立运行，互不干扰。
+Additional attribution requirement: any distribution of this program or its derivatives must keep the copyright notice and author attribution in a prominent position.
 
-**开发中，尚未发布可用的正式发行版。** 本仓库当前先建立项目说明与协作基础；完整源码及运行包将在来源资料整理和真实隔离验收后同步。不要把仓库初始化视为产品发布。
-
-## 1. 项目简介
-
-每个实例应拥有独立的运行目录、DSH 数据、浏览器状态、工作区、缓存、端口、锁及进程树。核心验收标准是：停止并删除 A 时，B 仍保持运行、认证和数据完整。
-
-## 2. 界面与截图
-
-最终界面截图将在当前功能整合后补充；目前不展示过期界面或未经验证的功能效果。
-
-## 3. 功能与状态
-
-| 功能 | 当前状态 |
-| --- | --- |
-| 受信资产、创建事务、失败回滚、注册表和端口协调 | 已有本地实现与阶段验证 |
-| Windows 受管进程树和退出确认 | 已有本地实现与阶段验证 |
-| 官方 Web 独立部署、数据与工作区 | 已有本地实现，旧架构真实双实例验证已完成 |
-| Web 每实例独立 Electron 宿主 | 已实现并编译；新架构删除 A/B 存活验收待完成 |
-| 快照、恢复与所有权删除保护 | 已有本地实现和定向验证 |
-| 官方 Electron / 社区 Tauri 桌面版 | 实现与构建中，尚无认证发行包 |
-| 完整许可证清单、更新与新机发行 | 待完成 |
-
-状态更新于 2026-10-07，详见 [开发路线图](ROADMAP.md)。
-
-## 4. 下载与安装
-
-当前没有正式安装包、认证 Desktop 运行包或可用自动更新版本。请勿从 Issue 或不明镜像运行声称属于本项目的安装器。
-
-计划提供 Windows x64 的完整 setup 和 zip 发行包；实际兼容范围以日后发布说明与验收记录为准。
-
-## 5. 快速开始
-
-当前仓库用于项目准备与协作。源码及发行包尚未同步时，无需执行 npm install 或自行猜测启动命令。后续将随源代码提供可复现的开发与构建步骤。
-
-## 6. 隔离原则与限制
-
-- 不调用普通 DSH 安装器进行实例创建；使用核验过的完整独立运行包。
-- 原有实例不自动迁移或接管；不确定是否能够安全启动时明确拒绝。
-- 仅停止所属进程树，不按通用进程名或共享端口批量终止进程。
-- 删除前确认退出与目录所有权，失败时保留数据和登记。
-- 官方和社区桌面版保留各自真实外壳。
-- 目录与进程管理隔离不等同于虚拟机安全边界，不能用来对抗任意恶意本机程序。
-
-## 7. 问题反馈
-
-请通过 [Issues](https://github.com/ZC-kf/WhaleRealm/issues) 报告问题或提出建议。提供实例类型、版本和脱敏后的复现步骤；不要上传 API Key、登录令牌、完整用户目录或个人会话内容。
-
-安全问题请按 [SECURITY.md](SECURITY.md) 处理。
-
-## 8. 开发与贡献
-
-Hub 技术栈为 Electron、React、TypeScript 和 Vite；官方桌面运行体使用 Electron，社区桌面运行体使用 Tauri/Rust/WebView2。
-
-请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。当前优先完成主体功能，之后集中执行关键回归、真实双实例验收与整体复核。
-
-## 9. 作者与项目
-
-作者：凛枫。项目维护账号：[ZC-kf](https://github.com/ZC-kf)。
-
-项目地址：[ZC-kf/WhaleRealm](https://github.com/ZC-kf/WhaleRealm)。本项目是独立的实例管理项目；名称提及不代表获得 DSH 上游的官方背书。
-
-## 10. 许可证与致谢
-
-鲸域自有内容沿用项目的 GPL-3.0-or-later 声明，完整文本见 [LICENSE](LICENSE)，项目版权与署名说明见 [NOTICE](NOTICE)。
-
-DSH、Electron、Node.js、Tauri、WebView2、React 及其他第三方组件保留各自许可证和版权。完整分发依赖清单与来源核对仍在进行；本次仓库初始化不包含这些第三方运行文件，也不表示已经完成全部授权核验。
+Copyright (C) 2026 凛枫 (Linfeng)
