@@ -1,8 +1,8 @@
-﻿{
+{
     "schema":  "dsh-hub.final-acceptance.v1",
     "generatedAt":  "2026-09-23T15:28:46.1426575Z",
     "hubExecutable":  {
-                          "path":  "D:\\Dsh-Hub-HIDM\\hub\\release\\win-unpacked\\DSH Launcher.exe",
+                          "path":  "<workdir>\\hub\\release\\win-unpacked\\DSH Launcher.exe",
                           "bytes":  239076352,
                           "sha256":  "5dece2ea23a2acf0242fa7b0d727a104b6f6f186285202719bd7e5cc08dd2f2a",
                           "builtAt":  "2026-09-23T23:42:36"
@@ -69,7 +69,7 @@
                                 },
     "archivedAssets":  {
                            "count":  7,
-                           "destination":  "D:\\Dsh-Hub-HIDM\\_archive",
+                           "destination":  "<workdir>\\_archive",
                            "verifiedBy":  "file count + total bytes + exe sha256 before/after",
                            "recordFile":  "manifests/archive-moves.txt",
                            "jsonRecordBroken":  "ConvertTo-Json throws Argument types do not match under PS 5.1; flat text record used instead"
@@ -86,7 +86,7 @@
     "liveInstanceUntouched":  {
                                   "port":  3080,
                                   "pid":  38308,
-                                  "dshHome":  "C:\\Users\\Lenovo\\.dsh",
+                                  "dshHome":  "<user-profile>\\.dsh",
                                   "webProfilePackageJsonMtime":  "2026-09-20T23:44:08"
                               }
 }

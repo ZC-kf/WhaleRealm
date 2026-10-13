@@ -3,7 +3,7 @@
   "generatedAt": "2026-09-23T20:35:00+08:00",
   "purpose": "Authoritative catalogue of every DeepSeek Harness desktop distribution found on this machine, with an explicit verdict on whether it can be run as an isolated Hub-managed instance.",
   "scanScope": "D:\\ recursive to depth 5 for 'DeepSeek Harness.exe' and 'app.asar'; C:\\ LocalAppData\\Programs, Program Files, Program Files (x86), LocalAppData for DeepSeek/DSH directories",
-  "isolationRule": "A distribution may be registered as a launchable Hub instance ONLY if it honours DSH_DESKTOP_USER_DATA and DSH_DESKTOP_PORT. Without them an instance falls back to the shared %APPDATA% Electron userData, the shared C:\\Users\\Lenovo\\.dsh home and the default port, which is exactly the cross-instance interference this Hub exists to prevent. Such distributions are catalogued and archived, never launched.",
+  "isolationRule": "A distribution may be registered as a launchable Hub instance ONLY if it honours DSH_DESKTOP_USER_DATA and DSH_DESKTOP_PORT. Without them an instance falls back to the shared %APPDATA% Electron userData, the shared <user-profile>\\.dsh home and the default port, which is exactly the cross-instance interference this Hub exists to prevent. Such distributions are catalogued and archived, never launched.",
   "archiveRelocation": {
     "note": "On 2026-09-23 the scattered D-drive assets were MOVED (not copied) into the Hub archive. Every 'path', 'executable', 'bundledArchive' and nonDesktopDshAssets path elsewhere in this file is the PRE-ARCHIVE original and must be resolved through this map. Historical manifests (asset-inventory.json, migration.json, source-lock.json) are deliberately left frozen as evidence of the state at the time they were written.",
     "movedAt": "2026-09-23T13:45:00Z",
@@ -11,18 +11,18 @@
     "rollback": "scripts/archive-dsh-assets.ps1 -Rollback",
     "verified": "every move was verified by file count, total bytes and executable SHA-256 before/after",
     "map": {
-      "D:\\deepseek-harness": "D:\\Dsh-Hub-HIDM\\_archive\\deepseek-harness",
-      "D:\\deepseek-harness-desktop": "D:\\Dsh-Hub-HIDM\\_archive\\deepseek-harness-desktop",
-      "D:\\DSH-Desktop-source-audit": "D:\\Dsh-Hub-HIDM\\_archive\\DSH-Desktop-source-audit",
-      "D:\\dsh-browser": "D:\\Dsh-Hub-HIDM\\_archive\\dsh-browser",
-      "D:\\dsh-browser-backups": "D:\\Dsh-Hub-HIDM\\_archive\\dsh-browser-backups",
-      "D:\\dsh-browser-baseline-652cca": "D:\\Dsh-Hub-HIDM\\_archive\\dsh-browser-baseline-652cca",
-      "D:\\dsh-worktable": "D:\\Dsh-Hub-HIDM\\_archive\\dsh-worktable"
+      "D:\\deepseek-harness": "<workdir>\\_archive\\deepseek-harness",
+      "D:\\deepseek-harness-desktop": "<workdir>\\_archive\\deepseek-harness-desktop",
+      "D:\\DSH-Desktop-source-audit": "<workdir>\\_archive\\DSH-Desktop-source-audit",
+      "D:\\dsh-browser": "<workdir>\\_archive\\dsh-browser",
+      "D:\\dsh-browser-backups": "<workdir>\\_archive\\dsh-browser-backups",
+      "D:\\dsh-browser-baseline-652cca": "<workdir>\\_archive\\dsh-browser-baseline-652cca",
+      "D:\\dsh-worktable": "<workdir>\\_archive\\dsh-worktable"
     },
     "notMoved": {
       "D:\\DSH-Desktop": "still in place; it hosts the live instance and this agent session. Gated behind -AllowLiveDesktop plus a free port 3080.",
       "D:\\DeepSeekWorkSave": "out of scope, untouched",
-      "C:\\Users\\Lenovo\\.dsh": "live DSH_HOME, read-only source, never moved"
+      "<user-profile>\\.dsh": "live DSH_HOME, read-only source, never moved"
     }
   },
   "distributions": [
@@ -44,8 +44,8 @@
         "running": true,
         "listenPort": 3080,
         "ownerPid": 38308,
-        "dshHome": "C:\\Users\\Lenovo\\.dsh",
-        "electronUserData": "C:\\Users\\Lenovo\\AppData\\Roaming\\DeepSeek Harness",
+        "dshHome": "<user-profile>\\.dsh",
+        "electronUserData": "<user-profile>\\AppData\\Roaming\\DeepSeek Harness",
         "note": "This process hosts the current agent session. It was never stopped, moved or modified."
       },
       "isolatable": false,
@@ -74,8 +74,8 @@
     },
     {
       "id": "official-0.1.7-alpha.1",
-      "path": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1",
-      "executable": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1\\DeepSeek Harness.exe",
+      "path": "<workdir>\\runtimes\\0.1.7-alpha.1",
+      "executable": "<workdir>\\runtimes\\0.1.7-alpha.1\\DeepSeek Harness.exe",
       "executableSha256": "7c484b12eb490b74cad478b68bd4a057b91de376a6b470465f9679f9472f2453",
       "executableBytes": 244465152,
       "fileVersion": "0.1.7-alpha.1",
@@ -100,7 +100,7 @@
     }
   ],
   "cDriveState": {
-    "dshHome": "C:\\Users\\Lenovo\\.dsh",
+    "dshHome": "<user-profile>\\.dsh",
     "belongsTo": "live-downstream-fork",
     "contents": ["backup-before-plugins", "dsh-plugin-cyber", "electron", "memory", "profiles", "sessions", "skills", "storages", "vendor", ".anonymous-user-id", ".credentials.yaml", "ext-bridge-token", "settings.yaml"],
     "measuredMb": { "skills": 59.2, "profiles": 79.5, "vendor": 249.8, "memory": 1286.5, "sessions": 62.1, "storages": 0.4, "dsh-plugin-cyber": 1.5 },
@@ -118,6 +118,6 @@
     { "surface": "HKCU\\Software\\Classes\\dsh", "detail": "dsh:// deep-link protocol handler is per-user and shared by every distribution; the last registration wins." },
     { "surface": "%LOCALAPPDATA%\\deepseek-harness-desktop-updater", "detail": "auto-updater cache shared by the fork and any distribution using the same updaterCacheDirName." },
     { "surface": "%LOCALAPPDATA%\\electron", "detail": "Electron download cache, shared and write-once." },
-    { "surface": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1", "detail": "one read-only runtime shared by all Hub instances. Measured 0 writes during instance runs, but there is no ACL enforcing it; an applied auto-update would affect every instance at once." }
+    { "surface": "<workdir>\\runtimes\\0.1.7-alpha.1", "detail": "one read-only runtime shared by all Hub instances. Measured 0 writes during instance runs, but there is no ACL enforcing it; an applied auto-update would affect every instance at once." }
   ]
 }

@@ -24,6 +24,7 @@
 import { Layers3, LoaderCircle, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LauncherApiProvider, resolveLauncherApi, useLauncherApi } from './api/client'
+import { describeDeleteFailure } from './delete-feedback'
 import { LauncherHome } from './components/LauncherHome'
 import { FirstRunGuide } from './components/FirstRunGuide'
 import { TrayPanel } from './components/TrayPanel'
@@ -288,12 +289,28 @@ function LauncherShell() {
           }}
           onRenameInstance={store.renameInstance}
           onDeleteInstance={async (id, options) => {
-            const result = await store.deleteInstance(id, options)
-            store.showToast({
-              kind: 'success',
-              message: options.mode === 'purge' ? t('toast.instanceDeleted') : t('toast.instanceUnregistered'),
-            })
-            return result
+            try {
+              const result = await store.deleteInstance(id, options)
+              store.showToast({
+                kind: 'success',
+                message: options.mode === 'purge' ? t('toast.instanceDeleted') : t('toast.instanceUnregistered'),
+              })
+              return result
+            } catch (error) {
+              // 删除失败必须显式提示，否则对话框照常关闭、列表毫无变化，
+              // 用户会误以为“删除无效”。旧版/共享实例缺少所有权证明时主进程
+              // fail-closed 拒绝回收（文件保留），此处给出改用「仅移除注册」的引导。
+              const feedback = describeDeleteFailure(error, t)
+              const root = store.instances.find(item => item.id === id)?.root
+              store.showToast({
+                kind: 'error',
+                message: feedback.message,
+                action: feedback.ownershipBlocked && root
+                  ? { label: t('toast.openInstanceFolder'), onClick: () => { void api.openPath(root) } }
+                  : undefined,
+              })
+              return undefined
+            }
           }}
           onDiscoverInstances={async () => {
             const result = await store.discoverInstances()

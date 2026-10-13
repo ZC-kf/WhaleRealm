@@ -22,8 +22,9 @@
  */
 
 import { createHash } from 'node:crypto'
-import { lstat, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import type { DesktopInstanceRecord } from './instance-types'
 import { PROJECT_OWNER, PROJECT_REPO } from '../src/constants'
 import type { ProjectReleaseCheckResult, ProjectReleaseInfo, ReleaseAssetInfo } from '../src/types'
 
@@ -202,6 +203,61 @@ async function digestFile(file: string): Promise<string> {
   return `sha256:${sha256(bytes)}`
 }
 
+/** Include recorded legacy/external data paths without changing their layout. */
+export function releaseProtectedPaths(hubRoot: string, settingsFile: string, records: DesktopInstanceRecord[]): string[] {
+  return [...new Set([
+    settingsFile,
+    path.join(hubRoot, 'hub-data', 'instances.json'),
+    path.join(hubRoot, 'hub-data', 'instances.json.bak'),
+    path.join(hubRoot, 'instances'),
+    ...records.flatMap(record => [record.root, record.dshHome, record.electronUserData,
+      record.desktopProfile, record.workspace, record.logs, record.skills, record.cache]),
+  ].filter((value): value is string => !!value).map(value => path.resolve(value)))]
+}
+
+/** Stable, typed tree inventory. Links are rejected, including root ancestors. */
+async function digestProtectedPath(protectedPath: string): Promise<string> {
+  const root = path.resolve(protectedPath)
+  const missing = (error: unknown) => (error as NodeJS.ErrnoException).code === 'ENOENT'
+  try {
+    // lstat(root) alone would already follow a junction in an ancestor.
+    const ancestors: string[] = []
+    for (let current = path.dirname(root); ; current = path.dirname(current)) {
+      ancestors.unshift(current)
+      if (path.dirname(current) === current) break
+    }
+    for (const ancestor of ancestors) {
+      let info
+      try { info = await lstat(ancestor) } catch (error) { if (missing(error)) continue; throw error }
+      if (info.isSymbolicLink()) throw new Error(`symbolic link or junction: ${ancestor}`)
+      if (!info.isDirectory()) throw new Error(`ancestor is not a directory: ${ancestor}`)
+    }
+    const hash = createHash('sha256')
+    async function visit(current: string, relative: string, allowMissing = false): Promise<void> {
+      let info
+      try { info = await lstat(current) } catch (error) {
+        if (allowMissing && missing(error)) { hash.update(JSON.stringify(['missing', relative])); return }
+        throw error
+      }
+      if (info.isSymbolicLink()) throw new Error(`symbolic link or junction: ${current}`)
+      if (info.isDirectory()) {
+        hash.update(JSON.stringify(['directory', relative]))
+        for (const name of (await readdir(current)).sort()) {
+          await visit(path.join(current, name), relative ? `${relative}/${name}` : name)
+        }
+      } else if (info.isFile()) {
+        hash.update(JSON.stringify(['file', relative, await digestFile(current)]))
+      } else {
+        throw new Error(`unsupported file type: ${current}`)
+      }
+    }
+    await visit(root, '', true)
+    return `sha256:${hash.digest('hex')}`
+  } catch (error) {
+    throw new Error(`无法读取受保护路径：${root} (${error instanceof Error ? error.message : String(error)})`)
+  }
+}
+
 /**
  * 受信安装：只接受 downloadRelease 发行的 artifactId。执行前重新校验
  * staging 归属、凭据文件与产物摘要；执行后对比受保护路径摘要，确认更新
@@ -221,15 +277,15 @@ export async function installRelease(artifactId: string, deps: InstallDeps): Pro
   const actual = await digestFile(target)
   if (actual !== receipt.digest) throw new Error('产物在下载后被改动，摘要不符，拒绝执行')
 
-  // 安装前快照受保护数据（缺失文件记为空串摘要）。
+  // Only ENOENT at the protected root represents missing data; all read errors fail closed.
   const snapshot = new Map<string, string>()
   for (const protectedPath of deps.protectedPaths ?? []) {
-    snapshot.set(path.resolve(protectedPath), await digestFile(protectedPath).catch(() => 'sha256:<missing>'))
+    snapshot.set(path.resolve(protectedPath), await digestProtectedPath(protectedPath))
   }
   const exit = await deps.runInstaller(target, ['/S'])
-  if (exit.code !== 0) throw new Error(`安装器退出码异常：${exit.code}`)
   for (const [protectedPath, before] of snapshot) {
-    const after = await digestFile(protectedPath).catch(() => 'sha256:<missing>')
+    const after = await digestProtectedPath(protectedPath)
     if (before !== after) throw new Error(`更新过程修改了受保护数据：${protectedPath}`)
   }
+  if (exit.code !== 0) throw new Error(`安装器退出码异常：${exit.code}`)
 }

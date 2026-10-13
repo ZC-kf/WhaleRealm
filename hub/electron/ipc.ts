@@ -48,7 +48,7 @@ export interface IpcDependencies {
   /** 受信发行通道的 staging 目录（主进程所有；userData/release-staging）。 */
   releaseStagingDir: string
   /** 受保护数据路径：更新安装前后摘要必须一致（设置 / 实例注册表 / 实例数据根）。 */
-  releaseProtectedPaths: () => string[]
+  releaseProtectedPaths: () => string[] | Promise<string[]>
 }
 
 export function registerIpcHandlers(deps: IpcDependencies): void {
@@ -181,7 +181,7 @@ export function registerIpcHandlers(deps: IpcDependencies): void {
         child.on('exit', code => resolve({ code: code ?? -1 }))
         child.on('error', () => resolve({ code: -1 }))
       }),
-      protectedPaths: deps.releaseProtectedPaths(),
+      protectedPaths: await deps.releaseProtectedPaths(),
     })
   })
   ipcMain.handle(IPC.updateRestart, () => {

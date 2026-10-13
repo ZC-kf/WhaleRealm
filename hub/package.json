@@ -63,7 +63,12 @@
       "licenses/**/*",
       "package.json"
     ],
-    "extraResources": [],
+    "extraResources": [
+      {
+        "from": "../imports/isolation-build/community-managed-build-r5/community-desktop-0.21.0-win-x64.zip",
+        "to": "runtimes/community-desktop-0.21.0-win-x64.zip"
+      }
+    ],
     "win": {
       "icon": "build/icon.png",
       "target": [

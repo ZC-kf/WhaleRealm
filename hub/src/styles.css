@@ -1335,6 +1335,15 @@ input[type='checkbox']:focus-visible { outline: 2px solid var(--accent); outline
   border-bottom: 1px solid var(--border);
 }
 .tray-panel-balance { font-size: 12px; font-weight: 600; color: var(--accent); }
+.tray-error-strip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px 8px 14px;
+  font-size: 12px; line-height: 1.4;
+  color: var(--danger); background: var(--danger-soft);
+  border-bottom: 1px solid var(--border);
+}
+.tray-error-strip > span { flex: 1 1 auto; }
+.tray-error-strip .icon-button { flex: none; color: var(--danger); }
 .tray-panel-section { padding: 10px 14px; border-bottom: 1px solid var(--border); }
 .tray-panel-title { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: var(--fg-faint); text-transform: uppercase; margin-bottom: 8px; }
 .tray-current { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }

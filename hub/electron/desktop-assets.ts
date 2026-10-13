@@ -22,7 +22,7 @@
  */
 import { lstatSync, readFileSync, type Stats } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import manifest from '../../manifests/isolated-runtimes.json'
 import type { RuntimeAsset } from './runtime-adapter'
 import type { InstanceKind } from '../src/types'
@@ -57,19 +57,58 @@ export function stableStringify(value: unknown): string {
   if (isPlainObject(value)) return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`
   return JSON.stringify(value) ?? 'undefined'
 }
+/**
+ * Placeholder token for the packaged Electron resources root. A certified catalog entry
+ * may ship its archive *inside* the installer (`extraResources` → `<resources>/runtimes/…zip`),
+ * so the url is written machine-independently as `<appResources>/runtimes/<name>.zip` and
+ * expanded at load time — mirroring the `<hubRuntimes>` precedent in instance-discovery.ts.
+ */
+export const APP_RESOURCES_TOKEN = '<appResources>'
+/** Packaged resources root in an Electron runtime; null elsewhere (e.g. unit tests). */
+function detectAppResourcesRoot(): string | null {
+  const root = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath
+  return typeof root === 'string' && root.length > 0 ? root : null
+}
+/**
+ * Expand the `<appResources>` token against the packaged resources root.
+ *
+ * A url without the token is returned unchanged. A token url with no resolvable absolute
+ * root returns null so the caller can drop the entry (fail-closed) instead of crashing —
+ * non-Electron runs (vitest) legitimately have no `process.resourcesPath`.
+ */
+export function expandAppResourcesUrl(url: string, resourcesRoot: string | null): string | null {
+  const index = url.indexOf(APP_RESOURCES_TOKEN)
+  if (index === -1) return url
+  if (!resourcesRoot || !path.isAbsolute(resourcesRoot)) return null
+  const rest = url.slice(index + APP_RESOURCES_TOKEN.length).replace(/^[/\\]+/, '')
+  if (!rest) return null
+  return pathToFileURL(path.resolve(resourcesRoot, rest)).href
+}
 export function certifiedDesktopAssets(kind: InstanceKind): CertifiedDesktopAsset[] {
   if (!(kind in sources) || manifest.schemaVersion !== 1) return []
-  return (manifest.runtimes as unknown as CertifiedDesktopAsset[]).filter(asset => {
+  const resourcesRoot = detectAppResourcesRoot()
+  const out: CertifiedDesktopAsset[] = []
+  for (const asset of manifest.runtimes as unknown as CertifiedDesktopAsset[]) {
+    if (asset.kind !== kind) continue
     try {
-      const url = new URL(asset.url)
-      return asset.kind === kind && asset.status === 'certified' && asset.sourceRef === sources[asset.kind]
+      // Expand placeholder urls BEFORE validating protocol/extension, then fail-closed:
+      // an unresolvable `<appResources>` url drops the entry rather than throwing.
+      const url = expandAppResourcesUrl(asset.url, resourcesRoot)
+      if (url === null) continue
+      const parsed = new URL(url)
+      const valid = asset.status === 'certified' && asset.sourceRef === sources[asset.kind]
         && asset.adapterId === `${kind}-v1` && asset.format === 'zip' && VERSION_PATTERN.test(asset.version)
-        && ['https:', 'file:'].includes(url.protocol) && !url.username && !url.password && /\.zip$/i.test(url.pathname)
+        && ['https:', 'file:'].includes(parsed.protocol) && !parsed.username && !parsed.password && /\.zip$/i.test(parsed.pathname)
         && INTEGRITY_PATTERN.test(asset.integrity) && DIGEST_PATTERN.test(asset.patchSha256) && DIGEST_PATTERN.test(asset.receiptSha256)
         && EXECUTABLE_PATTERN.test(asset.executable) && DIGEST_PATTERN.test(asset.acceptance?.evidenceSha256 ?? '')
         && Number.isFinite(Date.parse(asset.acceptance?.acceptedAt ?? '')) && DESKTOP_ACCEPTANCE_CHECKS.every(key => asset.acceptance?.checks?.[key] === true)
-    } catch { return false }
-  })
+      if (!valid) continue
+      // Return a copy with the resolved url when a placeholder was expanded, so callers
+      // always see a real path and the imported manifest is never mutated.
+      out.push(url === asset.url ? asset : { ...asset, url })
+    } catch { /* skip malformed entry */ }
+  }
+  return out
 }
 export function certifiedDesktopAsset(kind: InstanceKind, version: string): CertifiedDesktopAsset {
   const matches = certifiedDesktopAssets(kind).filter(asset => asset.version === version)

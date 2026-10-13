@@ -4,9 +4,9 @@
   "hub": {
     "repository": "https://github.com/rirko/dsh-melody-launcher.git",
     "ref": "main",
-    "archive": "D:\\Dsh-Hub-HIDM\\hub-archives\\dsh-melody-launcher-main.tar.gz",
+    "archive": "<workdir>\\hub-archives\\dsh-melody-launcher-main.tar.gz",
     "archiveSha256": "143cb1a08719dd4701a8ef26dfabd67b0459a303fe19bb769d4186f8ca95c4c6",
-    "sourcePath": "D:\\Dsh-Hub-HIDM\\hub",
+    "sourcePath": "<workdir>\\hub",
     "role": "Electron React Hub UI reference and fork base",
     "gitClone": "unavailable: direct git/codeload failed with curl 28; archive acquired through GitHub API"
   },
@@ -14,9 +14,9 @@
     "repository": "https://github.com/deepseek-ai/deepseek-harness.git",
     "commit": "c36a83ff6bb95e3f82cf79f9be7c724270a8aa61",
     "version": "0.1.7-alpha.1",
-    "archive": "D:\\Dsh-Hub-HIDM\\hub-archives\\deepseek-harness-c36a83ff.tar.gz",
+    "archive": "<workdir>\\hub-archives\\deepseek-harness-c36a83ff.tar.gz",
     "archiveSha256": "bb91bc6b02d76b90a930a799de7e2cac1ea6bf81bba84cb5a2889ed1c2e59738",
-    "sourcePath": "D:\\Dsh-Hub-HIDM\\upstream\\deepseek-harness",
+    "sourcePath": "<workdir>\\upstream\\deepseek-harness",
     "appsDesktop": true,
     "appsDesktopHost": true,
     "role": "official Electron Desktop runner source",

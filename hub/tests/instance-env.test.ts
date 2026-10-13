@@ -28,27 +28,27 @@ describe('instance environment contract', () => {
   it('overrides inherited DSH state with the selected instance roots', () => {
     const env = buildInstanceEnvironment({
       id: 'stable',
-      dshHome: 'D:\\Dsh-Hub-HIDM\\instances\\stable\\dsh-home',
-      electronUserData: 'D:\\Dsh-Hub-HIDM\\instances\\stable\\electron-user-data',
-      workspace: 'D:\\Dsh-Hub-HIDM\\instances\\stable\\workspace',
+      dshHome: 'D:\\whalerealm-test\\instances\\stable\\dsh-home',
+      electronUserData: 'D:\\whalerealm-test\\instances\\stable\\electron-user-data',
+      workspace: 'D:\\whalerealm-test\\instances\\stable\\workspace',
       port: 19391,
       lockName: 'dsh-desktop-stable',
-    }, { DSH_HOME: 'C:\\Users\\Lenovo\\.dsh', PATH: 'test' })
+    }, { DSH_HOME: '<user-profile>\\.dsh', PATH: 'test' })
 
-    expect(env.DSH_HOME).toBe('D:\\Dsh-Hub-HIDM\\instances\\stable\\dsh-home')
-    expect(env.DSH_DESKTOP_USER_DATA).toBe('D:\\Dsh-Hub-HIDM\\instances\\stable\\electron-user-data')
-    expect(env.DSH_DESKTOP_WORKSPACE).toBe('D:\\Dsh-Hub-HIDM\\instances\\stable\\workspace')
+    expect(env.DSH_HOME).toBe('D:\\whalerealm-test\\instances\\stable\\dsh-home')
+    expect(env.DSH_DESKTOP_USER_DATA).toBe('D:\\whalerealm-test\\instances\\stable\\electron-user-data')
+    expect(env.DSH_DESKTOP_WORKSPACE).toBe('D:\\whalerealm-test\\instances\\stable\\workspace')
     expect(env.DSH_DESKTOP_PORT).toBe('19391')
     expect(env.DSH_DESKTOP_INSTANCE_ID).toBe('stable')
-    expect(env.DSH_HOME).not.toBe('C:\\Users\\Lenovo\\.dsh')
+    expect(env.DSH_HOME).not.toBe('<user-profile>\\.dsh')
   })
 
   it('drops inherited Electron node-mode so the runner launches as a desktop app', () => {
     const env = buildInstanceEnvironment({
       id: 'stable',
-      dshHome: 'D:\\Dsh-Hub-HIDM\\instances\\stable\\dsh-home',
-      electronUserData: 'D:\\Dsh-Hub-HIDM\\instances\\stable\\electron-user-data',
-      workspace: 'D:\\Dsh-Hub-HIDM\\instances\\stable\\workspace',
+      dshHome: 'D:\\whalerealm-test\\instances\\stable\\dsh-home',
+      electronUserData: 'D:\\whalerealm-test\\instances\\stable\\electron-user-data',
+      workspace: 'D:\\whalerealm-test\\instances\\stable\\workspace',
       port: 19391,
       lockName: 'dsh-desktop-stable',
     }, { ELECTRON_RUN_AS_NODE: '1', PATH: 'test' })

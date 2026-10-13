@@ -24,7 +24,8 @@
 
 import { spawnSync } from 'node:child_process'
 import { inflateRawSync } from 'node:zlib'
-import { existsSync, statSync, readFileSync } from 'node:fs'
+import { existsSync, statSync, readFileSync, readdirSync } from 'node:fs'
+import { scanReleaseEntries } from './lib/release-content.mjs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -35,32 +36,8 @@ const { version } = JSON.parse(readFileSync(path.join(hubDir, 'package.json'), '
 
 const findings = []
 const notes = []
-let failed = false
-const fail = message => { findings.push(`FAIL: ${message}`); failed = true }
-const warn = message => findings.push(`WARN: ${message}`)
+const fail = message => findings.push(`FAIL: ${message}`)
 const info = message => notes.push(`INFO: ${message}`)
-
-/** 开发机路径 / 用户数据 / 密钥形态的硬性黑名单（条目名与内容都查）。 */
-const FORBIDDEN_STRINGS = [
-  'd:\\dsh-hub-hidm',
-  'd:/dsh-hub-hidm',
-  '/d/dsh-hub-hidm',
-  'c:\\users\\lenovo',
-  'dsh-hub-hidm',
-]
-const FORBIDDEN_ENTRIES = [
-  /^instances\//,
-  /^hub-data\//,
-  /^\.dsh/,
-  /(^|\/)hub-root\.txt$/,
-  /(^|\/)settings\.json$/,
-  /(^|\/)\.git\//,
-  /(^|\/)release\//,
-  /^tests\//,
-  /^scripts\//,
-  /(^|\/)node_modules\/\.pnpm\//,
-]
-const API_KEY_PATTERN = /sk-[A-Za-z0-9]{20,}/
 
 function findArtifact(basename, kind) {
   const target = path.join(releaseDir, basename)
@@ -93,10 +70,16 @@ function readZipEntries(zipPath) {
   if (eocd < 0) { fail('zip 未找到 EOCD 结束记录，文件可能损坏'); return null }
   const entryCount = buffer.readUInt16LE(eocd + 10)
   const directoryOffset = buffer.readUInt32LE(eocd + 16)
+  const directorySize = buffer.readUInt32LE(eocd + 12)
+  if (buffer.readUInt16LE(eocd + 4) || buffer.readUInt16LE(eocd + 6) || buffer.readUInt16LE(eocd + 8) !== entryCount || entryCount === 0xffff || directoryOffset === 0xffffffff || directoryOffset + directorySize !== eocd || eocd + 22 + buffer.readUInt16LE(eocd + 20) !== buffer.length) throw new Error('ZIP 分卷、ZIP64 或目录边界不支持，扫描未完成')
   const entries = []
   let cursor = directoryOffset
   for (let index = 0; index < entryCount; index += 1) {
+    if (cursor + 46 > eocd) throw new Error('ZIP 中央目录越界')
     if (buffer.readUInt32LE(cursor) !== 0x02014b50) { fail('zip 中央目录结构异常'); return null }
+    const flags = buffer.readUInt16LE(cursor + 8)
+    if (flags & 1) throw new Error('加密 ZIP 条目不支持，扫描未完成')
+    if (((buffer.readUInt32LE(cursor + 38) >>> 16) & 0xf000) === 0xa000) throw new Error('ZIP 链接不支持，扫描未完成')
     const method = buffer.readUInt16LE(cursor + 10)
     const compressedSize = buffer.readUInt32LE(cursor + 20)
     const uncompressedSize = buffer.readUInt32LE(cursor + 24)
@@ -104,70 +87,62 @@ function readZipEntries(zipPath) {
     const extraLength = buffer.readUInt16LE(cursor + 30)
     const commentLength = buffer.readUInt16LE(cursor + 32)
     const localOffset = buffer.readUInt32LE(cursor + 42)
+    if (cursor + 46 + nameLength + extraLength + commentLength > eocd) throw new Error('ZIP 条目索引越界')
     const name = buffer.toString('utf8', cursor + 46, cursor + 46 + nameLength)
-    entries.push({ name, method, compressedSize, uncompressedSize, localOffset, buffer })
+    entries.push({ name, method, flags, compressedSize, uncompressedSize, localOffset, directoryOffset, buffer })
     cursor += 46 + nameLength + extraLength + commentLength
   }
+  if (cursor !== eocd) throw new Error('ZIP 条目数与中央目录不一致')
   return entries
 }
 
 /** 读取单个 zip 条目内容（stored 直接切片，deflate 用 zlib 原始解压）。 */
 function zipEntryData(entry) {
   const { buffer, localOffset } = entry
+  if (localOffset + 30 > entry.directoryOffset) throw new Error(`本地文件头越界：${entry.name}`)
   if (buffer.readUInt32LE(localOffset) !== 0x04034b50) throw new Error(`本地文件头异常：${entry.name}`)
   const nameLength = buffer.readUInt16LE(localOffset + 26)
   const extraLength = buffer.readUInt16LE(localOffset + 28)
   const dataStart = localOffset + 30 + nameLength + extraLength
+  if (dataStart + entry.compressedSize > entry.directoryOffset || buffer.toString('utf8', localOffset + 30, localOffset + 30 + nameLength) !== entry.name || buffer.readUInt16LE(localOffset + 8) !== entry.method || buffer.readUInt16LE(localOffset + 6) !== entry.flags) throw new Error(`本地文件头与索引不一致：${entry.name}`)
   const raw = buffer.subarray(dataStart, dataStart + entry.compressedSize)
   if (entry.method === 0) return raw
-  if (entry.method === 8) return inflateRawSync(raw)
+  if (entry.method === 8) return inflateRawSync(raw, { maxOutputLength: 256 * 1024 * 1024 })
   throw new Error(`不支持的压缩方式（${entry.method}）：${entry.name}`)
 }
 
-/** 内容扫描只对文本类条目做密钥形态检查（二进制 pak/dll 会随机命中 sk-… 正则）。 */
-const TEXT_EXTENSIONS = /\.(js|mjs|cjs|json|html?|txt|md|css|ya?ml|map|ts)$/i
-
-function scanZipContents(entries) {
-  let scanned = 0
-  for (const entry of entries) {
-    if (entry.name.endsWith('/')) continue // 目录条目
-    if (entry.uncompressedSize > 256 * 1024 * 1024) { warn(`跳过超大条目（>256MB）的内容扫描：${entry.name}`); continue }
-    let data
-    try { data = zipEntryData(entry) } catch (error) { fail(`条目解压失败：${entry.name}（${error.message}）`); continue }
-    scanned += 1
-    // 路径字样是字面量，扫全部条目（包括二进制）不会误报。
-    const latin = data.toString('latin1').toLowerCase()
-    for (const forbidden of FORBIDDEN_STRINGS) {
-      if (latin.includes(forbidden)) { fail(`zip 条目 ${entry.name} 含开发机路径字样：${forbidden}`) }
-    }
-    if (TEXT_EXTENSIONS.test(entry.name) && API_KEY_PATTERN.test(data.toString('utf8'))) {
-      fail(`zip 条目 ${entry.name} 含疑似 API Key（sk-…）`)
-    }
-  }
-  info(`内容扫描了 ${scanned} 个 zip 条目`)
+// Probe PATH and electron-builder's already installed cache; never download tools.
+function findSevenZip() {
+  const candidates = ['7z.exe', '7za.exe']
+  const cache = process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'electron-builder', 'Cache', '7zip@1.0.0')
+  if (cache && existsSync(cache)) for (const item of readdirSync(cache)) candidates.push(path.join(cache, item, 'bin', '7za.exe'))
+  return candidates.find(candidate => spawnSync(candidate, ['i'], { stdio: ['ignore', 'pipe', 'pipe'], timeout: 10000 }).status === 0)
 }
 
-/**
- * docs/、licenses/、dist-electron 都被 electron-builder 收进 app.asar
- * （files: dist/dist-electron/docs/licenses）。asar 头部是 JSON 文件清单，
- * 用字面字符串确认它们确实在包里。
- */
-function expectedEntriesPresent(entries) {
-  const names = new Set(entries.map(entry => entry.name.toLowerCase()))
-  const required = ['resources/app.asar', 'license.electron.txt', 'licenses.chromium.html']
-  for (const item of required) {
-    if (!names.has(item)) fail(`zip 缺少必备文件：${item}`)
-  }
-  const asar = entries.find(entry => entry.name.toLowerCase() === 'resources/app.asar')
-  if (!asar) return
-  let asarBytes
-  try { asarBytes = zipEntryData(asar) } catch (error) { fail(`app.asar 读取失败：${error.message}`); return }
-  const asarText = asarBytes.toString('latin1')
-  // asar 头是 JSON 目录树：目录是嵌套键（"docs":），文件是叶键（"main.js"）。
-  for (const marker of ['"dist":', '"dist-electron":', '"main.js"', '"preload.mjs"', '"docs":', '"licenses":', '"GPL-3.0.txt"', '"THIRD_PARTY_NOTICES.md"']) {
-    if (!asarText.includes(marker)) fail(`app.asar 内缺少预期内容：${marker}`)
-  }
-  if (asarText.toLowerCase().includes('dsh-hub-hidm')) fail('app.asar 含开发机路径字样：dsh-hub-hidm')
+function scanInstaller(setup) {
+  const executable = findSevenZip()
+  if (!executable) throw new Error('NSIS 内容扫描未完成：找不到 7-Zip，禁止发布')
+  const list = spawnSync(executable, ['l', '-slt', '--', setup], { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 120000 })
+  if (list.error || list.status !== 0) throw new Error('NSIS 内容扫描未完成：7-Zip 列举失败')
+  const listing = list.stdout.split(/----------\r?\n/)[1]
+  if (!listing) throw new Error('NSIS 内容扫描未完成：缺少真实文件清单')
+  const entries = listing.split(/\r?\n\r?\n/).filter(block => block.startsWith('Path = ')).map(block => {
+    const fields = Object.fromEntries(block.split(/\r?\n/).filter(line => line.includes(' = ')).map(line => { const i = line.indexOf(' = '); return [line.slice(0, i), line.slice(i + 3)] }))
+    const directory = fields.Folder === '+' || /^D/.test(fields.Attributes ?? '')
+    const name = fields.Path.replaceAll('\\', '/') + (directory ? '/' : '')
+    if (fields['Symbolic Link'] || fields['Hard Link']) throw new Error(`NSIS 链接不支持：${name}`)
+    const size = Number(fields.Size)
+    if (!Number.isSafeInteger(size) || size < 0) throw new Error(`NSIS 文件大小异常：${name}`)
+    return { name, size, read: () => {
+      // -so extracts only to stdout; -spd disables wildcards in archive member names.
+      const result = spawnSync(executable, ['x', '-so', '-spd', '--', setup, fields.Path], { stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 256 * 1024 * 1024 + 1, timeout: 120000 })
+      if (result.error || result.status !== 0) throw new Error(`NSIS 文件读取失败：${name}`)
+      return result.stdout
+    } }
+  })
+  if (!entries.length) throw new Error('NSIS 内容扫描未完成：空文件清单')
+  for (const finding of scanReleaseEntries(entries)) fail(`NSIS ${finding}`)
+  info(`NSIS 实际载荷扫描了 ${entries.length} 个条目（${executable}）`)
 }
 
 console.log(`WhaleRealm 发行包验证（版本 ${version}）`)
@@ -177,36 +152,16 @@ const zip = findArtifact(`WhaleRealm-${version}-x64.zip`, 'zip')
 const setup = findArtifact(`WhaleRealm-${version}-setup.exe`, 'exe')
 
 if (zip) {
-  const entries = readZipEntries(zip)
-  if (entries) {
-    info(`zip 共 ${entries.length} 个条目`)
-    for (const entry of entries) {
-      for (const pattern of FORBIDDEN_ENTRIES) {
-        if (pattern.test(entry.name.toLowerCase())) { fail(`zip 含禁止条目：${entry.name}`); break }
-      }
+  try {
+    const entries = readZipEntries(zip)
+    if (entries) {
+      info(`zip 共 ${entries.length} 个条目`)
+      for (const finding of scanReleaseEntries(entries.map(entry => ({ name: entry.name, size: entry.uncompressedSize, read: () => zipEntryData(entry) })))) fail(`ZIP ${finding}`)
     }
-    expectedEntriesPresent(entries)
-    scanZipContents(entries)
-  }
+  } catch (error) { fail(`ZIP 扫描未完成：${error.message}`) }
 }
-
 if (setup) {
-  // NSIS 安装包内部内容扫描需要 7z；没有就如实说明，不冒充通过。
-  const probe = spawnSync('7z.exe', [], { encoding: 'utf8' })
-  if (probe.error) {
-    warn('NSIS 产物只做了存在性/PE 头校验；内容扫描需要 7z（未安装，未执行）')
-  } else {
-    const list = spawnSync('7z.exe', ['l', setup], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
-    if (list.status === 0) {
-      const lower = list.stdout.toLowerCase()
-      for (const forbidden of FORBIDDEN_STRINGS) {
-        if (lower.includes(forbidden)) fail(`NSIS 产物条目含开发机路径字样：${forbidden}`)
-      }
-      if (API_KEY_PATTERN.test(list.stdout)) fail('NSIS 产物条目含疑似 API Key（sk-…）')
-    } else {
-      warn('7z 列举 NSIS 内容失败，内容扫描未完成')
-    }
-  }
+  try { scanInstaller(setup) } catch (error) { fail(error.message) }
 }
 
 console.log('')

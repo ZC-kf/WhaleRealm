@@ -67,7 +67,7 @@ function connect(url) {
   })
 }
 
-const BASE = 'file:///C:/Users/Lenovo/AppData/Local/Programs/DSH%20Desktop%20Hub/resources/app.asar/dist/index.html'
+const BASE = 'file:///' + `${process.env.LOCALAPPDATA || ''}/Programs/DSH Desktop Hub/resources/app.asar/dist/index.html`.replace(/\\/g, '/').replace(/ /g, '%20')
 
 async function main() {
   const targets = await getJSON('/json/list')

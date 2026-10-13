@@ -2,19 +2,19 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a visual Electron/React Hub under `D:\Dsh-Hub-HIDM` that launches multiple official DeepSeek Harness Desktop instances with independent state roots, ports, locks, workspaces, logs, versions, plugins, and Skills.
+**Goal:** Build a visual Electron/React Hub under `<workdir>` that launches multiple official DeepSeek Harness Desktop instances with independent state roots, ports, locks, workspaces, logs, versions, plugins, and Skills.
 
 **Architecture:** Start from the `rirko/dsh-melody-launcher` Electron/React UI patterns, but replace its single `RuntimeController` with an instance-indexed supervisor. Use the current official `deepseek-ai/deepseek-harness` release at commit `c36a83ff6bb95e3f82cf79f9be7c724270a8aa61` (`0.1.7-alpha.1`), whose Desktop runtime is split between `apps/desktop` and `apps/desktop-host`; do not use the older local `apps/electron` fork as the official runtime. Build a minimal official source patch that reads `DSH_DESKTOP_PORT` in `apps/desktop-host/src/index.ts`, while the Hub launches one OS Electron process per instance with explicit `DSH_HOME`, `DSH_DESKTOP_INSTANCE_ID`, `DSH_DESKTOP_USER_DATA`, `DSH_DESKTOP_PORT`, and `--user-data-dir`. Migration is copy-first and manifest-driven: original D: paths remain intact until hash verification and isolated smoke tests pass.
 
 **Tech Stack:** Electron, React, TypeScript, Vite, Vitest, official DeepSeek Harness Desktop runtime, Node.js 22+, pnpm 11.7+, PowerShell migration scripts, SHA-256 manifests.
 
-**Spec:** `D:\Dsh-Hub-HIDM\docs\superpowers\specs\2026-09-22-dsh-desktop-instance-hub-design.md`
+**Spec:** `<workdir>\docs\superpowers\specs\2026-09-22-dsh-desktop-instance-hub-design.md`
 
 ## Global Constraints
 
 - The current `D:\DSH-Desktop` process on `127.0.0.1:3080` must not be stopped or modified during staging.
-- The current `C:\Users\Lenovo\.dsh` and `C:\Users\Lenovo\AppData\Roaming\DeepSeek Harness` state roots are snapshot-only inputs; never move or delete them automatically.
-- Every managed instance must live below `D:\Dsh-Hub-HIDM\instances\<id>` and must have distinct `dsh-home`, `electron-user-data`, `profiles\desktop`, workspace, log, port, and lock values.
+- The current `<user-profile>\.dsh` and `<user-profile>\AppData\Roaming\DeepSeek Harness` state roots are snapshot-only inputs; never move or delete them automatically.
+- Every managed instance must live below `<workdir>\instances\<id>` and must have distinct `dsh-home`, `electron-user-data`, `profiles\desktop`, workspace, log, port, and lock values.
 - Renderer code never writes profile files, credentials, or migration manifests directly; all mutations go through validated Electron main-process IPC and atomic writers.
 - Existing D: sources remain recoverable until a separate explicit cleanup action after acceptance.
 - Every production behavior change follows RED -> GREEN -> REFACTOR, with a test observed failing before implementation.
@@ -25,16 +25,16 @@
 ### Task 1: Establish the Central Workspace and Asset Inventory
 
 **Files:**
-- Create: `D:\Dsh-Hub-HIDM\manifests\asset-inventory.json`
-- Create: `D:\Dsh-Hub-HIDM\manifests\migration.json`
-- Create: `D:\Dsh-Hub-HIDM\scripts\inventory-dsh.ps1`
-- Create: `D:\Dsh-Hub-HIDM\scripts\stage-assets.ps1`
-- Create: `D:\Dsh-Hub-HIDM\scripts\verify-assets.ps1`
-- Create: `D:\Dsh-Hub-HIDM\backups\README.md`
+- Create: `<workdir>\manifests\asset-inventory.json`
+- Create: `<workdir>\manifests\migration.json`
+- Create: `<workdir>\scripts\inventory-dsh.ps1`
+- Create: `<workdir>\scripts\stage-assets.ps1`
+- Create: `<workdir>\scripts\verify-assets.ps1`
+- Create: `<workdir>\backups\README.md`
 
 **Interfaces:**
 - `inventory-dsh.ps1 -Root D:\ -Output manifests\asset-inventory.json` emits classified source, binary, archive, plugin, and backup records without modifying sources.
-- `stage-assets.ps1 -Inventory manifests\asset-inventory.json -DestinationRoot D:\Dsh-Hub-HIDM\imports` copies only approved D: assets and writes source/destination hashes.
+- `stage-assets.ps1 -Inventory manifests\asset-inventory.json -DestinationRoot <workdir>\imports` copies only approved D: assets and writes source/destination hashes.
 - `verify-assets.ps1 -Manifest manifests\migration.json` exits nonzero on missing files, size mismatch, or SHA-256 mismatch.
 
 - [ ] **Step 1: Write the failing inventory contract test**
@@ -61,7 +61,7 @@ Describe 'DSH inventory contract' {
 Run:
 
 ```powershell
-Invoke-Pester D:\Dsh-Hub-HIDM\scripts\tests\inventory-contract.Tests.ps1 -Output Detailed
+Invoke-Pester <workdir>\scripts\tests\inventory-contract.Tests.ps1 -Output Detailed
 ```
 
 Expected: FAIL because the inventory and verification scripts do not exist yet.
@@ -78,15 +78,15 @@ artifact: D:\dsh-worktable\*.tgz, release archives, installers
 backup: paths containing backup, baseline, or audit
 ```
 
-The staging script must refuse a destination outside `D:\Dsh-Hub-HIDM\imports`, use a temporary sibling during copy, then atomically rename it. It must never call `Remove-Item` on a source path.
+The staging script must refuse a destination outside `<workdir>\imports`, use a temporary sibling during copy, then atomically rename it. It must never call `Remove-Item` on a source path.
 
 - [ ] **Step 4: Re-run the inventory tests and inspect generated manifests**
 
 Run:
 
 ```powershell
-Invoke-Pester D:\Dsh-Hub-HIDM\scripts\tests\inventory-contract.Tests.ps1 -Output Detailed
-Get-Content D:\Dsh-Hub-HIDM\manifests\asset-inventory.json | ConvertFrom-Json
+Invoke-Pester <workdir>\scripts\tests\inventory-contract.Tests.ps1 -Output Detailed
+Get-Content <workdir>\manifests\asset-inventory.json | ConvertFrom-Json
 ```
 
 Expected: tests pass and the manifest contains explicit source paths, kinds, byte counts, and timestamps.
@@ -96,9 +96,9 @@ Expected: tests pass and the manifest contains explicit source paths, kinds, byt
 Run:
 
 ```powershell
-pwsh -File D:\Dsh-Hub-HIDM\scripts\inventory-dsh.ps1 -Root D:\ -Output D:\Dsh-Hub-HIDM\manifests\asset-inventory.json
-pwsh -File D:\Dsh-Hub-HIDM\scripts\stage-assets.ps1 -Inventory D:\Dsh-Hub-HIDM\manifests\asset-inventory.json -DestinationRoot D:\Dsh-Hub-HIDM\imports
-pwsh -File D:\Dsh-Hub-HIDM\scripts\verify-assets.ps1 -Manifest D:\Dsh-Hub-HIDM\manifests\migration.json
+pwsh -File <workdir>\scripts\inventory-dsh.ps1 -Root D:\ -Output <workdir>\manifests\asset-inventory.json
+pwsh -File <workdir>\scripts\stage-assets.ps1 -Inventory <workdir>\manifests\asset-inventory.json -DestinationRoot <workdir>\imports
+pwsh -File <workdir>\scripts\verify-assets.ps1 -Manifest <workdir>\manifests\migration.json
 ```
 
 Expected: source directories remain present and verification exits 0.
@@ -108,27 +108,27 @@ Expected: source directories remain present and verification exits 0.
 ### Task 2: Import the Hub UI and Pin the Upstream Sources
 
 **Files:**
-- Create: `D:\Dsh-Hub-HIDM\hub\` from `rirko/dsh-melody-launcher` at a recorded commit
-- Create: `D:\Dsh-Hub-HIDM\upstream\deepseek-harness\` from the official repository at a recorded commit containing `apps/desktop`
-- Create: `D:\Dsh-Hub-HIDM\manifests\source-lock.json`
-- Modify: `D:\Dsh-Hub-HIDM\hub\package.json`
-- Test: `D:\Dsh-Hub-HIDM\hub\tests\baseline.test.ts`
+- Create: `<workdir>\hub\` from `rirko/dsh-melody-launcher` at a recorded commit
+- Create: `<workdir>\upstream\deepseek-harness\` from the official repository at a recorded commit containing `apps/desktop`
+- Create: `<workdir>\manifests\source-lock.json`
+- Modify: `<workdir>\hub\package.json`
+- Test: `<workdir>\hub\tests\baseline.test.ts`
 
 **Interfaces:**
 - `source-lock.json` records repository URL, commit SHA, package versions, Node/pnpm floors, and local source paths.
-- The Hub build remains runnable from `D:\Dsh-Hub-HIDM\hub` without reading the current user profile.
+- The Hub build remains runnable from `<workdir>\hub` without reading the current user profile.
 
 - [ ] **Step 1: Clone/pin sources without touching the live installation**
 
 Use a shallow clone or an existing local mirror, then record exact SHAs:
 
 ```powershell
-git clone --filter=blob:none --no-checkout https://github.com/rirko/dsh-melody-launcher.git D:\Dsh-Hub-HIDM\hub
-git -C D:\Dsh-Hub-HIDM\hub rev-parse HEAD | Out-File D:\Dsh-Hub-HIDM\manifests\hub-commit.txt -Encoding ascii
-git clone --filter=blob:none --no-checkout https://github.com/deepseek-ai/deepseek-harness.git D:\Dsh-Hub-HIDM\upstream\deepseek-harness
-git -C D:\Dsh-Hub-HIDM\upstream\deepseek-harness fetch --depth=1 origin master
-git -C D:\Dsh-Hub-HIDM\upstream\deepseek-harness checkout origin/master
-git -C D:\Dsh-Hub-HIDM\upstream\deepseek-harness rev-parse HEAD | Out-File D:\Dsh-Hub-HIDM\manifests\official-desktop-commit.txt -Encoding ascii
+git clone --filter=blob:none --no-checkout https://github.com/rirko/dsh-melody-launcher.git <workdir>\hub
+git -C <workdir>\hub rev-parse HEAD | Out-File <workdir>\manifests\hub-commit.txt -Encoding ascii
+git clone --filter=blob:none --no-checkout https://github.com/deepseek-ai/deepseek-harness.git <workdir>\upstream\deepseek-harness
+git -C <workdir>\upstream\deepseek-harness fetch --depth=1 origin master
+git -C <workdir>\upstream\deepseek-harness checkout origin/master
+git -C <workdir>\upstream\deepseek-harness rev-parse HEAD | Out-File <workdir>\manifests\official-desktop-commit.txt -Encoding ascii
 ```
 
 If GitHub is unavailable, use the existing D: repositories only after proving their remote and commit match the source lock; do not silently substitute the community Electron fork for the official source.
@@ -149,7 +149,7 @@ it('has a pinned source lock and a buildable Hub package', async () => {
 
 - [ ] **Step 3: Run the baseline test and confirm it fails for the missing lock**
 
-Run from `D:\Dsh-Hub-HIDM\hub`:
+Run from `<workdir>\hub`:
 
 ```powershell
 pnpm exec vitest run tests/baseline.test.ts
@@ -214,13 +214,13 @@ export async function allocateLoopbackPort(preferred: number, reserved: Set<numb
 
 ```ts
 it('creates every mutable state root below the instance root', () => {
-  const a = resolveInstancePaths('D:\\Dsh-Hub-HIDM', 'stable')
-  const b = resolveInstancePaths('D:\\Dsh-Hub-HIDM', 'beta')
+  const a = resolveInstancePaths('<workdir>', 'stable')
+  const b = resolveInstancePaths('<workdir>', 'beta')
   expect(a.dshHome).not.toBe(b.dshHome)
   expect(a.electronUserData).not.toBe(b.electronUserData)
   expect(a.desktopProfile).toBe(`${a.dshHome}\\profiles\\desktop`)
   expect(a.lockName).not.toBe(b.lockName)
-  expect(a.dshHome.startsWith('D:\\Dsh-Hub-HIDM\\instances\\stable')).toBe(true)
+  expect(a.dshHome.startsWith('<workdir>\\instances\\stable')).toBe(true)
 })
 ```
 
@@ -298,8 +298,8 @@ it('requires an explicit instance id and absolute state roots', () => {
   expect(() => readDesktopInstanceContext({ DSH_DESKTOP_INSTANCE_ID: 'x' })).toThrow()
   expect(readDesktopInstanceContext({
     DSH_DESKTOP_INSTANCE_ID: 'stable',
-    DSH_HOME: 'D:\\Dsh-Hub-HIDM\\instances\\stable\\dsh-home',
-    DSH_DESKTOP_USER_DATA: 'D:\\Dsh-Hub-HIDM\\instances\\stable\\electron-user-data',
+    DSH_HOME: '<workdir>\\instances\\stable\\dsh-home',
+    DSH_DESKTOP_USER_DATA: '<workdir>\\instances\\stable\\electron-user-data',
     DSH_DESKTOP_PORT: '19391',
   }).port).toBe(19391)
 })
@@ -308,7 +308,7 @@ it('requires an explicit instance id and absolute state roots', () => {
 - [ ] **Step 2: Run the runner tests and confirm the expected red state**
 
 ```powershell
-pnpm --dir D:\Dsh-Hub-HIDM\upstream\deepseek-harness exec vitest run apps/desktop/tests/instance-context.spec.ts apps/desktop/tests/single-instance.spec.ts apps/desktop/tests/host-port.spec.ts
+pnpm --dir <workdir>\upstream\deepseek-harness exec vitest run apps/desktop/tests/instance-context.spec.ts apps/desktop/tests/single-instance.spec.ts apps/desktop/tests/host-port.spec.ts
 ```
 
 Expected: FAIL because the instance context exports and test files do not exist.
@@ -324,7 +324,7 @@ The Host command/config path must receive the validated loopback port and worksp
 - [ ] **Step 5: Run the focused official runner tests**
 
 ```powershell
-pnpm --dir D:\Dsh-Hub-HIDM\upstream\deepseek-harness exec vitest run apps/desktop/tests/instance-context.spec.ts apps/desktop/tests/single-instance.spec.ts apps/desktop/tests/host-port.spec.ts
+pnpm --dir <workdir>\upstream\deepseek-harness exec vitest run apps/desktop/tests/instance-context.spec.ts apps/desktop/tests/single-instance.spec.ts apps/desktop/tests/host-port.spec.ts
 ```
 
 Expected: all instance-context tests pass. Do not start a real Desktop yet; that belongs to the integration task.
@@ -388,7 +388,7 @@ Expected: FAIL because the multi-instance services do not exist.
 
 - [ ] **Step 3: Implement atomic instance persistence and validation**
 
-Persist to `D:\Dsh-Hub-HIDM\hub-data\instances.json` with a `.tmp` write, flush/close, rename, and `.bak` preservation. Reject duplicate IDs, roots outside the Hub root, and invalid ports before writing.
+Persist to `<workdir>\hub-data\instances.json` with a `.tmp` write, flush/close, rename, and `.bak` preservation. Reject duplicate IDs, roots outside the Hub root, and invalid ports before writing.
 
 - [ ] **Step 4: Implement process launch and process-tree cleanup**
 
@@ -496,9 +496,9 @@ export async function createMigrationSnapshot(source: string, destination: strin
 it('resolves skills inside the instance home, never the active user home', () => {
   const instance = fixtureInstance('stable')
   expect(resolveSkillSource(instance, 'vuln-scan')).toBe(
-    'D:\\Dsh-Hub-HIDM\\instances\\stable\\dsh-home\\skills\\vuln-scan',
+    '<workdir>\\instances\\stable\\dsh-home\\skills\\vuln-scan',
   )
-  expect(resolveSkillSource(instance, 'vuln-scan')).not.toContain('C:\\Users\\Lenovo\\.dsh')
+  expect(resolveSkillSource(instance, 'vuln-scan')).not.toContain('<user-profile>\\.dsh')
 })
 ```
 
@@ -522,7 +522,7 @@ The service must copy DSH source/runtime/plugin artifacts into `imports`, write 
 
 ```powershell
 pnpm exec vitest run tests/skill-registry.test.ts tests/migration-service.test.ts
-pwsh -File D:\Dsh-Hub-HIDM\scripts\verify-assets.ps1 -Manifest D:\Dsh-Hub-HIDM\manifests\migration.json
+pwsh -File <workdir>\scripts\verify-assets.ps1 -Manifest <workdir>\manifests\migration.json
 ```
 
 Expected: tests pass and the manifest points to only D: destination roots.
@@ -542,15 +542,15 @@ Expected: tests pass and the manifest points to only D: destination roots.
 **Interfaces:**
 - `build-official-runner.ps1 -Version 0.1.3-alpha.1` produces a pinned runner under `runtimes\0.1.3-alpha.1` and writes hashes.
 - `smoke-two-instances.ps1 -First stable -Second beta` launches two instances through the Hub, waits for readiness, and emits JSON evidence.
-- `verify-instance-isolation.ps1 -Evidence D:\Dsh-Hub-HIDM\manifests\two-instance-smoke.json` fails if any mutable root, port, PID, lock name, or loaded Skill path is duplicated.
+- `verify-instance-isolation.ps1 -Evidence <workdir>\manifests\two-instance-smoke.json` fails if any mutable root, port, PID, lock name, or loaded Skill path is duplicated.
 
 - [ ] **Step 1: Write the smoke-test harness and expected evidence schema**
 
 ```json
 {
   "instances": [
-    { "id": "stable", "pid": 0, "port": 19391, "dshHome": "D:\\Dsh-Hub-HIDM\\instances\\stable\\dsh-home", "userData": "D:\\Dsh-Hub-HIDM\\instances\\stable\\electron-user-data", "desktopProfile": "D:\\Dsh-Hub-HIDM\\instances\\stable\\dsh-home\\profiles\\desktop", "skillPaths": [] },
-    { "id": "beta", "pid": 0, "port": 19392, "dshHome": "D:\\Dsh-Hub-HIDM\\instances\\beta\\dsh-home", "userData": "D:\\Dsh-Hub-HIDM\\instances\\beta\\electron-user-data", "desktopProfile": "D:\\Dsh-Hub-HIDM\\instances\\beta\\dsh-home\\profiles\\desktop", "skillPaths": [] }
+    { "id": "stable", "pid": 0, "port": 19391, "dshHome": "<workdir>\\instances\\stable\\dsh-home", "userData": "<workdir>\\instances\\stable\\electron-user-data", "desktopProfile": "<workdir>\\instances\\stable\\dsh-home\\profiles\\desktop", "skillPaths": [] },
+    { "id": "beta", "pid": 0, "port": 19392, "dshHome": "<workdir>\\instances\\beta\\dsh-home", "userData": "<workdir>\\instances\\beta\\electron-user-data", "desktopProfile": "<workdir>\\instances\\beta\\dsh-home\\profiles\\desktop", "skillPaths": [] }
   ],
   "distinct": { "roots": true, "ports": true, "locks": true, "skills": true }
 }
@@ -559,7 +559,7 @@ Expected: tests pass and the manifest points to only D: destination roots.
 - [ ] **Step 2: Run the smoke harness before the runner exists and verify it fails closed**
 
 ```powershell
-pwsh -File D:\Dsh-Hub-HIDM\scripts\smoke-two-instances.ps1 -First stable -Second beta
+pwsh -File <workdir>\scripts\smoke-two-instances.ps1 -First stable -Second beta
 ```
 
 Expected: nonzero exit with a structured “runner not built” diagnostic; no process is spawned.
@@ -570,12 +570,12 @@ Run the official prerequisite/build commands for the checked-out source, then pa
 
 - [ ] **Step 4: Start two isolated Desktop instances through the Hub**
 
-Use separate temporary test instances under `D:\Dsh-Hub-HIDM\instances\smoke-a` and `smoke-b`. Do not import the active user profile. Use a no-model/API-key startup path if the official runner permits it; otherwise use copied test credentials only.
+Use separate temporary test instances under `<workdir>\instances\smoke-a` and `smoke-b`. Do not import the active user profile. Use a no-model/API-key startup path if the official runner permits it; otherwise use copied test credentials only.
 
 - [ ] **Step 5: Verify actual isolation evidence**
 
 ```powershell
-pwsh -File D:\Dsh-Hub-HIDM\scripts\verify-instance-isolation.ps1 -Evidence D:\Dsh-Hub-HIDM\manifests\two-instance-smoke.json
+pwsh -File <workdir>\scripts\verify-instance-isolation.ps1 -Evidence <workdir>\manifests\two-instance-smoke.json
 ```
 
 Check process command lines, listening ports, `profiles\desktop`, Electron userData, lock files/names, logs, and Skill resolution paths. Expected: both windows are official Desktop mode and every mutable state root is distinct.
@@ -585,12 +585,12 @@ Check process command lines, listening ports, `profiles\desktop`, Electron userD
 ### Task 9: Final Build, Packaging, and Rollback Documentation
 
 **Files:**
-- Create: `D:\Dsh-Hub-HIDM\scripts\start-hub.ps1`
-- Create: `D:\Dsh-Hub-HIDM\scripts\stop-hub.ps1`
-- Create: `D:\Dsh-Hub-HIDM\scripts\rollback-migration.ps1`
-- Create: `D:\Dsh-Hub-HIDM\README.md`
-- Modify: `D:\Dsh-Hub-HIDM\manifests\source-lock.json`
-- Modify: `D:\Dsh-Hub-HIDM\manifests\runtime-build.json`
+- Create: `<workdir>\scripts\start-hub.ps1`
+- Create: `<workdir>\scripts\stop-hub.ps1`
+- Create: `<workdir>\scripts\rollback-migration.ps1`
+- Create: `<workdir>\README.md`
+- Modify: `<workdir>\manifests\source-lock.json`
+- Modify: `<workdir>\manifests\runtime-build.json`
 
 - [ ] **Step 1: Write rollback script tests**
 
@@ -606,7 +606,7 @@ Describe 'rollback' {
 - [ ] **Step 2: Run rollback tests and confirm red**
 
 ```powershell
-Invoke-Pester D:\Dsh-Hub-HIDM\scripts\tests\rollback.Tests.ps1 -Output Detailed
+Invoke-Pester <workdir>\scripts\tests\rollback.Tests.ps1 -Output Detailed
 ```
 
 Expected: FAIL before the rollback guard exists.
@@ -618,14 +618,14 @@ Expected: FAIL before the rollback guard exists.
 - [ ] **Step 4: Run the complete verification matrix**
 
 ```powershell
-pnpm --dir D:\Dsh-Hub-HIDM\hub test
-pnpm --dir D:\Dsh-Hub-HIDM\hub run build
-pwsh -File D:\Dsh-Hub-HIDM\scripts\verify-assets.ps1 -Manifest D:\Dsh-Hub-HIDM\manifests\migration.json
-pwsh -File D:\Dsh-Hub-HIDM\scripts\verify-instance-isolation.ps1 -Evidence D:\Dsh-Hub-HIDM\manifests\two-instance-smoke.json
+pnpm --dir <workdir>\hub test
+pnpm --dir <workdir>\hub run build
+pwsh -File <workdir>\scripts\verify-assets.ps1 -Manifest <workdir>\manifests\migration.json
+pwsh -File <workdir>\scripts\verify-instance-isolation.ps1 -Evidence <workdir>\manifests\two-instance-smoke.json
 ```
 
 Expected: all commands exit 0; the smoke evidence contains two official Desktop processes and distinct state roots.
 
 - [ ] **Step 5: Record verification evidence and leave original paths intact**
 
-Write the final verification summary, test counts, source SHAs, runtime hashes, current active-instance note, and rollback locations into `D:\Dsh-Hub-HIDM\manifests\verification.json`. Do not delete or move the original D: sources in this plan.
+Write the final verification summary, test counts, source SHAs, runtime hashes, current active-instance note, and rollback locations into `<workdir>\manifests\verification.json`. Do not delete or move the original D: sources in this plan.

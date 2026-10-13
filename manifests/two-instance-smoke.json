@@ -10,17 +10,17 @@
       "pid": 30076,
       "port": 19391,
       "portListening": true,
-      "dshHome": "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\dsh-home",
-      "userData": "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\electron-user-data",
-      "desktopProfile": "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\dsh-home\\profiles\\desktop",
-      "workspace": "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\workspace",
-      "logs": "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\logs",
+      "dshHome": "<workdir>\\instances\\smoke-a\\dsh-home",
+      "userData": "<workdir>\\instances\\smoke-a\\electron-user-data",
+      "desktopProfile": "<workdir>\\instances\\smoke-a\\dsh-home\\profiles\\desktop",
+      "workspace": "<workdir>\\instances\\smoke-a\\workspace",
+      "logs": "<workdir>\\instances\\smoke-a\\logs",
       "lockName": "dsh-desktop-smoke-a",
-      "runtimeRoot": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1",
-      "runnerExecutable": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1\\DeepSeek Harness.exe",
-      "logFile": "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\logs\\desktop.log",
+      "runtimeRoot": "<workdir>\\runtimes\\0.1.7-alpha.1",
+      "runnerExecutable": "<workdir>\\runtimes\\0.1.7-alpha.1\\DeepSeek Harness.exe",
+      "logFile": "<workdir>\\instances\\smoke-a\\logs\\desktop.log",
       "skillPaths": [
-        "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\dsh-home\\skills\\smoke-probe"
+        "<workdir>\\instances\\smoke-a\\dsh-home\\skills\\smoke-probe"
       ],
       "skillHashes": [
         "a39d15c7e1dc65f5aeaa878cfe26dd87d42492ce05ddb9a6bb994230cdf5747c"
@@ -31,17 +31,17 @@
       "pid": 32820,
       "port": 19392,
       "portListening": true,
-      "dshHome": "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\dsh-home",
-      "userData": "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\electron-user-data",
-      "desktopProfile": "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\dsh-home\\profiles\\desktop",
-      "workspace": "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\workspace",
-      "logs": "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\logs",
+      "dshHome": "<workdir>\\instances\\smoke-b\\dsh-home",
+      "userData": "<workdir>\\instances\\smoke-b\\electron-user-data",
+      "desktopProfile": "<workdir>\\instances\\smoke-b\\dsh-home\\profiles\\desktop",
+      "workspace": "<workdir>\\instances\\smoke-b\\workspace",
+      "logs": "<workdir>\\instances\\smoke-b\\logs",
       "lockName": "dsh-desktop-smoke-b",
-      "runtimeRoot": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1",
-      "runnerExecutable": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1\\DeepSeek Harness.exe",
-      "logFile": "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\logs\\desktop.log",
+      "runtimeRoot": "<workdir>\\runtimes\\0.1.7-alpha.1",
+      "runnerExecutable": "<workdir>\\runtimes\\0.1.7-alpha.1\\DeepSeek Harness.exe",
+      "logFile": "<workdir>\\instances\\smoke-b\\logs\\desktop.log",
       "skillPaths": [
-        "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\dsh-home\\skills\\smoke-probe"
+        "<workdir>\\instances\\smoke-b\\dsh-home\\skills\\smoke-probe"
       ],
       "skillHashes": [
         "a39d15c7e1dc65f5aeaa878cfe26dd87d42492ce05ddb9a6bb994230cdf5747c"

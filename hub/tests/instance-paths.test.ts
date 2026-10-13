@@ -42,25 +42,25 @@ describe('instance path contract', () => {
     expect(legacy.skills).toBe('old-skills')
   })
   it('creates separate mutable roots below each instance id', () => {
-    const a = resolveInstancePaths('D:\\Dsh-Hub-HIDM', 'stable')
-    const b = resolveInstancePaths('D:\\Dsh-Hub-HIDM', 'beta')
+    const a = resolveInstancePaths('D:\\whalerealm-test', 'stable')
+    const b = resolveInstancePaths('D:\\whalerealm-test', 'beta')
 
     expect(a.dshHome).not.toBe(b.dshHome)
     expect(a.electronUserData).not.toBe(b.electronUserData)
     expect(a.desktopProfile).toBe(`${a.dshHome}\\profiles\\desktop`)
     expect(a.logs).not.toBe(b.logs)
-    expect(a.dshHome.startsWith('D:\\Dsh-Hub-HIDM\\instances\\stable')).toBe(true)
+    expect(a.dshHome.startsWith('D:\\whalerealm-test\\instances\\stable')).toBe(true)
   })
 
   it('rejects traversal and unsafe ids', () => {
-    expect(() => resolveInstancePaths('D:\\Dsh-Hub-HIDM', '..\\escape')).toThrow()
-    expect(() => resolveInstancePaths('D:\\Dsh-Hub-HIDM', 'bad/name')).toThrow()
+    expect(() => resolveInstancePaths('D:\\whalerealm-test', '..\\escape')).toThrow()
+    expect(() => resolveInstancePaths('D:\\whalerealm-test', 'bad/name')).toThrow()
   })
 
   it('preserves instanceKind through record resolution（类别字段不得被白名单丢弃）', () => {
-    const record = resolveInstanceRecord('D:\\Dsh-Hub-HIDM', 'stable', { instanceKind: 'community-desktop' })
+    const record = resolveInstanceRecord('D:\\whalerealm-test', 'stable', { instanceKind: 'community-desktop' })
     expect(record.instanceKind).toBe('community-desktop')
-    const none = resolveInstanceRecord('D:\\Dsh-Hub-HIDM', 'stable')
+    const none = resolveInstanceRecord('D:\\whalerealm-test', 'stable')
     expect(none.instanceKind).toBeUndefined()
   })
 })

@@ -26,6 +26,7 @@ import { ExternalLink, FolderOpen, Pause, Play, RefreshCw, Settings2, Square, X 
 import { useLauncherApi } from '../api/client'
 import { NumberField } from './NumberField'
 import { I18nProvider, useI18n } from '../i18n'
+import { describeActionFailure } from '../delete-feedback'
 import { DEFAULT_LANGUAGE } from '../i18n/locales'
 import type { TranslationKey } from '../i18n/translations/zh-CN'
 import type { AppSettings, DeepSeekBalanceResult, DeleteInstanceMode, DeleteInstanceOptions, DesktopInstance, InstanceRuntimeState, SkipScanMode } from '../types'
@@ -93,6 +94,7 @@ function TrayPanelContent({ settings, onSaveSettings }: { settings: AppSettings 
   const [purgeAck, setPurgeAck] = useState(false)
   const [shortcuts, setShortcuts] = useState<string[]>([])
   const [removeShortcuts, setRemoveShortcuts] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
   const stoppedClickRef = useRef<{ timer: number | null }>({ timer: null })
   const settingsBtnRef = useRef<HTMLButtonElement>(null)
 
@@ -166,7 +168,13 @@ function TrayPanelContent({ settings, onSaveSettings }: { settings: AppSettings 
     setRunningIndex(index => (index + (event.deltaY > 0 ? 1 : -1) + running.length) % running.length)
   }
 
-  const act = async (fn: () => Promise<unknown>) => { try { await fn(); await refresh() } catch { /* 错误以 toast 形态走主窗口 */ } }
+  // 托盘独立窗口（#tray）与主窗口不共享 store：托盘内动作失败无法经主窗口 toast 呈现
+  // （不存在该 IPC 通道），故在此聚合成面板顶部内联错误条。返回是否成功，
+  // 供调用方决定后续（如仅启动成功后才「启动后自动关闭」）。
+  const act = async (fn: () => Promise<unknown>, fallbackKey: TranslationKey = 'tray.actionFailed'): Promise<boolean> => {
+    try { await fn(); setActionError(null); await refresh(); return true }
+    catch (error) { setActionError(describeActionFailure(error, t, fallbackKey).message); return false }
+  }
 
   // 未启动实例：单击展示功能，双击启动（无右键菜单）。
   const onStoppedClick = (inst: DesktopInstance) => {
@@ -189,8 +197,8 @@ function TrayPanelContent({ settings, onSaveSettings }: { settings: AppSettings 
       if (update) await api.instanceMirrorUpdate(inst.id).catch(() => undefined)
       else await api.instanceMirrorRestore(inst.id).catch(() => undefined)
     }
-    await act(() => api.startInstance(inst.id))
-    if (settings?.autoCloseOnStart === true) void api.closeTray()
+    const started = await act(() => api.startInstance(inst.id))
+    if (started && settings?.autoCloseOnStart === true) void api.closeTray()
   }
 
   const openDelete = (inst: DesktopInstance) => {
@@ -216,7 +224,7 @@ function TrayPanelContent({ settings, onSaveSettings }: { settings: AppSettings 
       skipScanDays: Math.max(0, Math.floor(Number(skipDays) || 0)),
       removeShortcuts: removeShortcuts && shortcuts.length > 0,
     }
-    void act(() => api.deleteInstance(deleteTarget.id, options))
+    void act(() => api.deleteInstance(deleteTarget.id, options), 'toast.deleteFailed')
     setDeleteTarget(null)
   }
 
@@ -231,6 +239,13 @@ function TrayPanelContent({ settings, onSaveSettings }: { settings: AppSettings 
           <span>鲸域 · WhaleRealm</span>
           <span className="tray-panel-balance">{balanceText}</span>
         </div>
+
+        {actionError && (
+          <div className="tray-error-strip" role="alert">
+            <span>{actionError}</span>
+            <button type="button" className="icon-button" aria-label={t('common.close')} onClick={() => setActionError(null)}><X size={14} /></button>
+          </div>
+        )}
 
         {detailInst ? (
           <div className="tray-panel-section tray-detail">

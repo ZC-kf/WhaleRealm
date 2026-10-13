@@ -1,41 +1,38 @@
-# 第三方组件声明（THIRD PARTY NOTICES）
+# 第三方组件声明
 
-鲸域 · WhaleRealm 使用以下第三方开源组件。各组件版权归其原作者所有，按各自许可证分发。本清单覆盖运行时依赖与构建依赖。
+Hub 分发依赖的准确版本、完整许可全文与摘要索引见 [hub/licenses/THIRD_PARTY_NOTICES.md](hub/licenses/THIRD_PARTY_NOTICES.md) 和 [hub/licenses/third-party-index.json](hub/licenses/third-party-index.json)。这些文件由 scripts/generate-third-party-notices.mjs 从安装依赖及锁文件生成，发布前使用 --check 核对。
 
-## 运行时依赖（随软件分发）
+## 随 Hub 分发
 
-| 组件 | 许可证 |
-|---|---|
-| react / react-dom | **MIT License** |
-| lucide-react | **ISC License** |
-| yaml | **ISC License** |
-| Electron（含 Chromium、Node.js） | **MIT License**（Electron）；Chromium 与 Node.js 随发行体附带各自的第三方许可文件 |
+| 组件 | 许可说明 |
+| --- | --- |
+| React / React DOM / Scheduler | MIT；完整文本见 hub/licenses/npm/ |
+| lucide-react | ISC，同时保留 Feather 派生图标的 MIT 归属；不得省略 |
+| yaml | ISC |
+| Electron | MIT；Electron、Chromium 及其捆绑组件的完整许可随发行体提供 |
 
-## 新建实例按需下载的第三方组件（不随软件分发）
+## 源码内复制的第三方实现
 
-| 组件 | 用途 | 许可证 |
-|---|---|---|
-| dsh-tauri/deepseek-harness-desktop | 社区桌面版实例数据源（离线捆绑包内置 dsh 核心与运行时） | **MIT License** |
-| Node.js 官方发行版 | 官方网页版实例运行时（本地服务），按需下载部署到实例目录 | **MIT License**（核心；bundled 组件许可随官方发行版 LICENSE 文件） |
-| @deepseek-ai/dsh（npm 包，含其依赖） | 官方网页版实例运行体，按需 npm 安装到实例目录（版本与官方 GitHub Releases 一致） | **MIT License**（官方仓库 LICENSE；各依赖包自带许可声明） |
+scripts/lib/repair-pnpm-links.mjs 的 depPathToFilename 与 depPathToFilenameUnescaped 根据文件内记录，移植自 pnpm 11.7.0 的 dist/pnpm.mjs。原作者归属：
 
-## 构建与开发依赖（不随软件分发）
+- Copyright (c) 2015-2016 Rico Sta. Cruz and other contributors
+- Copyright (c) 2016-2025 Zoltan Kochan and other contributors
 
-| 组件 | 许可证 |
-|---|---|
-| TypeScript | **Apache-2.0 License** |
-| Vite | **MIT License** |
-| @vitejs/plugin-react | **MIT License** |
-| vite-plugin-electron | **MIT License** |
-| vite-plugin-electron-renderer | **MIT License** |
-| Vitest | **MIT License** |
-| electron-builder | **MIT License** |
-| jsdom | **MIT License** |
-| postcss | **MIT License** |
-| @types/node / @types/react / @types/react-dom | **MIT License**（类型声明包） |
+完整 MIT 授权文本保留于 [licenses/pnpm/LICENSE](licenses/pnpm/LICENSE)。该工具位于源码分发范围内，不能因 pnpm 属于构建工具而省略复制代码的许可。周边自有实现采用本项目许可。
 
-## 说明
+## 按需获取的运行体
 
-- 完整依赖树及各自许可证以 `hub/package-lock.json` 与 `hub/pnpm-lock.yaml` 记录的版本为准。
-- Electron 发行体内自带 `LICENSE.electron.txt` 与 `LICENSES.chromium.html`，见所收录运行体目录。
-- 本项目的许可证为 GNU GPLv3（或更高版本），见 LICENSE 文件。
+| 组件 | 许可与边界 |
+| --- | --- |
+| 官方 DeepSeek Harness 运行体 | 上游 MIT；实际依赖树保留各自许可；本项目补丁许可单独记录 |
+| 社区 deepseek-harness-desktop | 上游包含 MIT 及 Additional Terms — No Commercial Secondary Development；不能仅标注为纯 MIT。完整条款应随对应运行体的 source-notices 分发 |
+| Node.js 发行体 | Node.js 核心 MIT；捆绑组件许可以该发行体 LICENSE 为准 |
+| @deepseek-ai/dsh 及 npm 依赖 | 包及传递依赖各自许可；不得用主包 MIT 声明代替整个依赖树 |
+
+源码及运行体精确来源、补丁摘要、作者声明与待办见 [manifests/source-provenance.json](manifests/source-provenance.json)。该清单的本机证据路径不是公开下载链接。
+
+## 开发工具
+
+开发依赖的解析版本以 hub/package-lock.json 为准。构建工具不因参与构建就自动随 Hub 分发；若复制源码、资源或二进制进入公开产物，则需保留该部分许可与归属。
+
+本项目自有代码采用 GPL-3.0-or-later，见 [LICENSE](LICENSE)。第三方原有版权和许可不由此覆盖。

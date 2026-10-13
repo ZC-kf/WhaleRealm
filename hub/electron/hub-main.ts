@@ -30,6 +30,7 @@ import { addSkipEntry, readActiveSkipPaths } from './install-skip'
 import { findDesktopShortcuts } from './desktop-shortcut'
 import { createMainWindow, normalWindowSize } from './app-window'
 import { createInstanceRegistry } from './instance-registry'
+import { releaseProtectedPaths } from './project-release'
 import { createRuntimeSupervisor } from './runtime-supervisor'
 import { registerInstanceIpcHandlers } from './instance-ipc'
 import { diffMirror, snapshotMirror } from './instance-mirror'
@@ -346,10 +347,9 @@ app.whenReady().then(async () => {
     // 受信发行通道：staging 在 userData 下；受保护数据 = 设置 + 实例注册表 +
     // 实例数据根（更新安装前后摘要必须一致，见 project-release.installRelease）。
     releaseStagingDir: path.join(app.getPath('userData'), 'release-staging'),
-    releaseProtectedPaths: () => [
-      path.join(app.getPath('userData'), 'settings.json'),
-      path.join(hubRoot, 'instances'),
-    ],
+    releaseProtectedPaths: async () => releaseProtectedPaths(
+      hubRoot, path.join(app.getPath('userData'), 'settings.json'), await services!.instances.list(),
+    ),
   })
   // 内置项目文档：只读暴露打包目录 docs/<语言>/ 下的手册（回退链 lang → en → zh-CN）。
   ipcMain.handle(IPC.docsList, () => listDocs(path.join(app.getAppPath(), 'docs')))

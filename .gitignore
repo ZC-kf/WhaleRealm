@@ -13,7 +13,7 @@ runtimes/
 instances/
 hub-data/
 # The shared Skill library is a staged copy of the user's real library
-# (C:\Users\Lenovo\.dsh\skills): reproducible, 59 MB / ~9000 files, not source.
+# (<user-profile>\.dsh\skills): reproducible, 59 MB / ~9000 files, not source.
 shared/skills/
 logs/
 .tmp-pnpm-probe/

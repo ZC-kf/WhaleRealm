@@ -21,14 +21,21 @@
  * 保留上述版权声明及作者署名。
  */
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import * as fsPromises from 'node:fs/promises'
 import { createHash } from 'node:crypto'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { checkRelease, downloadRelease, installRelease, SETUP_ASSET_PATTERN, versionOfReleaseTag } from '../electron/project-release'
+import { checkRelease, downloadRelease, installRelease, releaseProtectedPaths, SETUP_ASSET_PATTERN, versionOfReleaseTag } from '../electron/project-release'
+import { resolveInstanceRecord } from '../electron/instance-paths'
 import { PROJECT_OWNER, PROJECT_REPO } from '../src/constants'
 import type { ReleaseCheckFetch } from '../electron/project-release'
+
+vi.mock('node:fs/promises', async importOriginal => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>()
+  return { ...actual, readdir: vi.fn(actual.readdir) }
+})
 
 /**
  * 受信发行通道合同：
@@ -219,7 +226,7 @@ describe('installRelease：任意路径拒绝 + 受保护数据不变', () => {
       const result = await installRelease(artifactId, {
         stagingDir: dir,
         runInstaller: async (file, args) => { executed.push([file, ...args]); return { code: 0 } },
-        protectedPaths: [settings, registry, path.join(instanceData, 'keep.txt')],
+        protectedPaths: [settings, registry, instanceData, path.join(dir, 'absent')],
       })
       expect(result).toBeUndefined()
       expect(executed).toEqual([[path.join(dir, artifactId), '/S']])
@@ -278,5 +285,92 @@ describe('installRelease：任意路径拒绝 + 受保护数据不变', () => {
       await expect(installRelease(artifactId, { stagingDir: dir, runInstaller: async () => ({ code: 2 }) }))
         .rejects.toThrow('退出码异常')
     } finally { rmSync(dir, { recursive: true, force: true }) }
+  })
+
+  it.each(['edit', 'add', 'delete', 'empty-directory', 'type-change'])('detects recursive protected directory changes: %s', async change => {
+    const { dir, artifactId } = await stage()
+    const data = path.join(dir, 'data')
+    const nested = path.join(data, 'nested')
+    const file = path.join(nested, 'keep.txt')
+    try {
+      mkdirSync(nested, { recursive: true })
+      writeFileSync(file, 'original')
+      await expect(installRelease(artifactId, {
+        stagingDir: dir, protectedPaths: [data],
+        runInstaller: async () => {
+          if (change === 'edit') writeFileSync(file, 'changed')
+          if (change === 'add') writeFileSync(path.join(nested, 'new.txt'), 'new')
+          if (change === 'delete') rmSync(file)
+          if (change === 'empty-directory') mkdirSync(path.join(nested, 'empty'))
+          if (change === 'type-change') { rmSync(file); mkdirSync(file) }
+          return { code: 0 }
+        },
+      })).rejects.toThrow('修改了受保护数据')
+    } finally { rmSync(dir, { recursive: true, force: true }) }
+  })
+
+  it('rejects junctions in protected data and ancestors before invoking installer', async () => {
+    const { dir, artifactId } = await stage()
+    const data = path.join(dir, 'data')
+    const outside = path.join(dir, 'outside')
+    const link = path.join(data, 'linked')
+    try {
+      mkdirSync(data); mkdirSync(outside)
+      writeFileSync(path.join(outside, 'keep.txt'), 'outside')
+      symlinkSync(outside, link, process.platform === 'win32' ? 'junction' : 'dir')
+      let executions = 0
+      for (const protectedPath of [data, link, path.join(link, 'keep.txt'), path.join(link, 'missing')]) {
+        await expect(installRelease(artifactId, {
+          stagingDir: dir, protectedPaths: [protectedPath],
+          runInstaller: async () => { executions++; return { code: 0 } },
+        })).rejects.toThrow('受保护路径')
+      }
+      expect(executions).toBe(0)
+    } finally { rmSync(dir, { recursive: true, force: true }) }
+  })
+
+  it.each(['create', 'remove'])('distinguishes missing roots from empty directories: %s', async change => {
+    const { dir, artifactId } = await stage()
+    const data = path.join(dir, 'data')
+    try {
+      if (change === 'remove') mkdirSync(data)
+      await expect(installRelease(artifactId, {
+        stagingDir: dir, protectedPaths: [data],
+        runInstaller: async () => {
+          if (change === 'create') mkdirSync(data)
+          else rmSync(data, { recursive: true })
+          return { code: 0 }
+        },
+      })).rejects.toThrow('修改了受保护数据')
+    } finally { rmSync(dir, { recursive: true, force: true }) }
+  })
+
+  it.each(['EACCES', 'EIO'])('fails closed on directory read error %s', async code => {
+    const { dir, artifactId } = await stage()
+    const data = path.join(dir, 'data')
+    mkdirSync(data)
+    const read = vi.mocked(fsPromises.readdir).mockRejectedValueOnce(Object.assign(new Error(code), { code }))
+    let executions = 0
+    try {
+      await expect(installRelease(artifactId, {
+        stagingDir: dir, protectedPaths: [data],
+        runInstaller: async () => { executions++; return { code: 0 } },
+      })).rejects.toThrow(code)
+      expect(executions).toBe(0)
+    } finally { read.mockClear(); rmSync(dir, { recursive: true, force: true }) }
+  })
+
+  it('protects actual registry generations and recorded external legacy data', () => {
+    const hubRoot = path.resolve('test-hub')
+    const settings = path.resolve('test-user-data/settings.json')
+    const record = resolveInstanceRecord(hubRoot, 'legacy', {
+      root: path.resolve('external-root'), dshHome: path.resolve('legacy-data'),
+      workspace: path.resolve('legacy-workspace'), electronUserData: path.resolve('legacy-electron'),
+    })
+    expect(releaseProtectedPaths(hubRoot, settings, [record])).toEqual(expect.arrayContaining([
+      settings, path.join(hubRoot, 'hub-data', 'instances.json'),
+      path.join(hubRoot, 'hub-data', 'instances.json.bak'), path.join(hubRoot, 'instances'),
+      record.root, record.dshHome, record.workspace, record.electronUserData, record.desktopProfile,
+    ]))
   })
 })

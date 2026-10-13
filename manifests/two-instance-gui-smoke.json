@@ -1,4 +1,4 @@
-﻿{
+{
     "schema":  "dsh-hub.two-instance-smoke.v1",
     "generatedAt":  "2026-09-23T10:31:11.8925312Z",
     "launchPath":  "packaged Hub renderer -\u003e window.launcher -\u003e preload ipcRenderer.invoke -\u003e main ipcMain instances:start -\u003e runtime supervisor -\u003e official runner (driven over CDP)",
@@ -11,30 +11,30 @@
                           "id":  "gui-a",
                           "pid":  16768,
                           "port":  19401,
-                          "dshHome":  "D:\\Dsh-Hub-HIDM\\instances\\gui-a\\dsh-home",
-                          "userData":  "D:\\Dsh-Hub-HIDM\\instances\\gui-a\\electron-user-data",
-                          "desktopProfile":  "D:\\Dsh-Hub-HIDM\\instances\\gui-a\\dsh-home\\profiles\\desktop",
-                          "workspace":  "D:\\Dsh-Hub-HIDM\\instances\\gui-a\\workspace",
-                          "logs":  "D:\\Dsh-Hub-HIDM\\instances\\gui-a\\logs",
+                          "dshHome":  "<workdir>\\instances\\gui-a\\dsh-home",
+                          "userData":  "<workdir>\\instances\\gui-a\\electron-user-data",
+                          "desktopProfile":  "<workdir>\\instances\\gui-a\\dsh-home\\profiles\\desktop",
+                          "workspace":  "<workdir>\\instances\\gui-a\\workspace",
+                          "logs":  "<workdir>\\instances\\gui-a\\logs",
                           "lockName":  "dsh-desktop-gui-a",
-                          "runtimeRoot":  "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1",
+                          "runtimeRoot":  "<workdir>\\runtimes\\0.1.7-alpha.1",
                           "skillPaths":  [
-                                             "D:\\Dsh-Hub-HIDM\\instances\\gui-a\\dsh-home\\skills\\smoke-probe"
+                                             "<workdir>\\instances\\gui-a\\dsh-home\\skills\\smoke-probe"
                                          ]
                       },
                       {
                           "id":  "gui-b",
                           "pid":  38168,
                           "port":  19402,
-                          "dshHome":  "D:\\Dsh-Hub-HIDM\\instances\\gui-b\\dsh-home",
-                          "userData":  "D:\\Dsh-Hub-HIDM\\instances\\gui-b\\electron-user-data",
-                          "desktopProfile":  "D:\\Dsh-Hub-HIDM\\instances\\gui-b\\dsh-home\\profiles\\desktop",
-                          "workspace":  "D:\\Dsh-Hub-HIDM\\instances\\gui-b\\workspace",
-                          "logs":  "D:\\Dsh-Hub-HIDM\\instances\\gui-b\\logs",
+                          "dshHome":  "<workdir>\\instances\\gui-b\\dsh-home",
+                          "userData":  "<workdir>\\instances\\gui-b\\electron-user-data",
+                          "desktopProfile":  "<workdir>\\instances\\gui-b\\dsh-home\\profiles\\desktop",
+                          "workspace":  "<workdir>\\instances\\gui-b\\workspace",
+                          "logs":  "<workdir>\\instances\\gui-b\\logs",
                           "lockName":  "dsh-desktop-gui-b",
-                          "runtimeRoot":  "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1",
+                          "runtimeRoot":  "<workdir>\\runtimes\\0.1.7-alpha.1",
                           "skillPaths":  [
-                                             "D:\\Dsh-Hub-HIDM\\instances\\gui-b\\dsh-home\\skills\\smoke-probe"
+                                             "<workdir>\\instances\\gui-b\\dsh-home\\skills\\smoke-probe"
                                          ]
                       }
                   ],

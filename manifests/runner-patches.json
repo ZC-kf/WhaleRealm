@@ -3,7 +3,7 @@
   "purpose": "Every modification made to the pinned official source tree while producing the local unsigned runner. The upstream directory was extracted from a GitHub API tarball and has no git metadata, so this manifest is the authoritative change record.",
   "officialCommit": "c36a83ff6bb95e3f82cf79f9be7c724270a8aa61",
   "officialVersion": "0.1.7-alpha.1",
-  "upstreamRoot": "D:\\Dsh-Hub-HIDM\\upstream\\deepseek-harness",
+  "upstreamRoot": "<workdir>\\upstream\\deepseek-harness",
   "patches": [
     {
       "id": "instance-user-data",

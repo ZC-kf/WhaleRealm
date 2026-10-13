@@ -2,14 +2,14 @@
 
 ## 目标
 
-在 `D:\Dsh-Hub-HIDM` 内构建一个可视化 Hub，统一管理多个官方 DeepSeek Harness Electron Desktop 实例。每个实例必须拥有独立的 DSH 状态根、Electron 用户数据、Desktop profile、工作目录、端口、日志和单实例锁，并能在不触碰当前运行实例的前提下完成版本、插件和 Skill 装配。
+在 `<workdir>` 内构建一个可视化 Hub，统一管理多个官方 DeepSeek Harness Electron Desktop 实例。每个实例必须拥有独立的 DSH 状态根、Electron 用户数据、Desktop profile、工作目录、端口、日志和单实例锁，并能在不触碰当前运行实例的前提下完成版本、插件和 Skill 装配。
 
 ## 现状与边界
 
 - 当前官方 Desktop 仍在运行：程序位于 `D:\DSH-Desktop`，Web 服务监听 `127.0.0.1:3080`。
-- 当前运行进程的 Electron `userData` 位于 `C:\Users\Lenovo\AppData\Roaming\DeepSeek Harness`；默认 DSH Home 还可能位于 `C:\Users\Lenovo\.dsh`。
+- 当前运行进程的 Electron `userData` 位于 `<user-profile>\AppData\Roaming\DeepSeek Harness`；默认 DSH Home 还可能位于 `<user-profile>\.dsh`。
 - D 盘已有官方源码 `D:\deepseek-harness`、旧版 Desktop 源码审计树 `D:\DSH-Desktop-source-audit`、两个 Desktop 发行目录、`D:\dsh-browser` 和插件/备份资产。
-- 本项目不在验收前停止、覆盖、删除当前实例，也不直接改写现用 `C:\Users\Lenovo\.dsh`。
+- 本项目不在验收前停止、覆盖、删除当前实例，也不直接改写现用 `<user-profile>\.dsh`。
 - 原 D 盘目录先保留为回滚源；整理动作只允许复制、建立受控链接或生成迁移清单。
 
 ## 方案
@@ -33,7 +33,7 @@
 ### 集中目录
 
 ```text
-D:\Dsh-Hub-HIDM\
+<workdir>\
 ├── hub/                         # Hub 源码、构建产物和配置
 ├── runner/                      # 官方 Desktop runner 源码/构建脚本
 ├── upstream/                    # 官方源码镜像与版本元数据
@@ -76,7 +76,7 @@ interface DesktopInstance {
 }
 ```
 
-所有路径必须是规范化绝对路径，且实例根必须位于 `D:\Dsh-Hub-HIDM\instances\<id>` 下。实例 ID 只允许字母、数字、点、下划线和横线。禁止实例之间复用 `dsh-home`、`electron-user-data`、`desktopProfile` 或日志目录。
+所有路径必须是规范化绝对路径，且实例根必须位于 `<workdir>\instances\<id>` 下。实例 ID 只允许字母、数字、点、下划线和横线。禁止实例之间复用 `dsh-home`、`electron-user-data`、`desktopProfile` 或日志目录。
 
 ### Skills 与插件
 
@@ -115,7 +115,7 @@ interface DesktopInstance {
 
 ## 明确不做
 
-- 不把当前 `C:\Users\Lenovo\.dsh` 或 `C:\Users\Lenovo\AppData\Roaming\DeepSeek Harness` 直接搬走。
+- 不把当前 `<user-profile>\.dsh` 或 `<user-profile>\AppData\Roaming\DeepSeek Harness` 直接搬走。
 - 不把不同端口或不同工作目录当作 profile 隔离证据。
 - 不把社区 Tauri/Web launcher 冒充官方 Electron Desktop runtime。
 - 不在未验证来源和许可证的情况下自动安装全部 D 盘插件。

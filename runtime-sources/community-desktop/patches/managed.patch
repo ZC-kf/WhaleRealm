@@ -61,6 +61,52 @@
              .map(|home| home.join(".codex").join("pets"))
              .map_err(|error| format!("PET_HOME_DIR_FAILED: failed to resolve home dir: {error}")),
      }
+--- a/src-tauri/src/bridge/remote.rs
++++ b/src-tauri/src/bridge/remote.rs
+@@ -48,6 +48,11 @@
+         method,
+         format!("{}{path}", crate::config::get_dsh_service_url(port)),
+     );
++    // `/api` 受每进程启动 token 门禁保护：附加该实例的凭据（启动 token 交换所得会话
++    // cookie）；无凭据（旧核心/尚未捕获）时保持裸请求，行为与门禁引入前一致。
++    if let Some(cookie) = crate::service::workflow::utils::carrier_cookie(port).await {
++        request = request.header(reqwest::header::COOKIE, cookie);
++    }
+     if let Some(payload) = payload.filter(|value| !value.is_null()) {
+         if is_get {
+             let params = payload.as_object().ok_or_else(|| {
+--- a/src-tauri/src/bridge/system_os.rs
++++ b/src-tauri/src/bridge/system_os.rs
+@@ -26,10 +26,19 @@
+     Ok(info)
+ }
+ 
++/// 面向用户的 dsh 地址：优先带每实例凭据（认证 URL），凭据未就绪时回退裸地址。
++///
++/// 随行核心把内置 Web 门禁在每进程启动 token 之后，裸地址在系统浏览器里会被 401
++/// 拒绝；认证 URL 让核心自带的 303→cookie 交换在浏览器侧完成。
++fn authenticated_service_url(port: u16) -> String {
++    crate::service::workflow::utils::carrier_url(port)
++        .unwrap_or_else(|| config::get_dsh_service_url(port))
++}
++
+ /// 在系统浏览器中打开 Harness 界面
+ #[tauri::command]
+ pub async fn open_in_browser(app_handle: AppHandle) -> Result<(), String> {
+-    let url = config::get_dsh_service_url(config::get_store_dat_setting(&app_handle).port);
++    let url = authenticated_service_url(config::get_store_dat_setting(&app_handle).port);
+     app_handle
+         .opener()
+         .open_url(url, None::<&str>)
+@@ -43,7 +52,7 @@
+ /// 单例剪贴板导致的崩溃/挂死（同「复制日志」）。
+ #[tauri::command]
+ pub async fn copy_service_url(app_handle: AppHandle) -> Result<(), String> {
+-    let url = config::get_dsh_service_url(config::get_store_dat_setting(&app_handle).port);
++    let url = authenticated_service_url(config::get_store_dat_setting(&app_handle).port);
+     crate::bridge::write_clipboard_text(url).await
+ }
+ 
 --- a/src-tauri/src/config/dependencies.rs
 +++ b/src-tauri/src/config/dependencies.rs
 @@ -165,8 +165,35 @@
@@ -138,6 +184,20 @@
      let dir_name = if cfg!(debug_assertions) {
          DSH_HOME_DEV_DIR_NAME
      } else {
+@@ -603,7 +605,12 @@
+         app_version: app.package_info().version.to_string(),
+         dsh_version: get_dsh_version(app),
+         node_version: get_active_node_version(),
+-        service_url: get_dsh_service_url(port),
++        // 内嵌 WebView 与「在浏览器打开」都以本 URL 加载 dsh：随行核心把内置 Web 门禁在
++        // 每进程启动 token 之后，因此这里回传带该实例凭据的认证 URL（核心自带
++        // 303→cookie 交换；凭据尚未捕获时回退到裸地址）。仅面向用户的地址带凭据，
++        // 内部探测根地址仍由 `get_dsh_service_url` 提供，就绪文件契约保持不变。
++        service_url: crate::service::workflow::utils::carrier_url(port)
++            .unwrap_or_else(|| get_dsh_service_url(port)),
+         // 用户数据所在目录 = $DSH_HOME（release 为官方 ~/.dsh，debug 为独立
+         // ~/.dsh.dev，见 get_dsh_data_path），不再是 AppData
+         data_dir: get_dsh_data_path(app).to_string_lossy().into_owned(),
 --- a/src-tauri/src/config/setting.rs
 +++ b/src-tauri/src/config/setting.rs
 @@ -156,6 +156,7 @@
@@ -210,16 +270,17 @@
          .expect("Failed to resolve app local data directory");
      directory.push(if cfg!(debug_assertions) {
          "EBWebView-dev"
-@@ -134,7 +135,7 @@
+@@ -133,8 +134,7 @@
+ 
      // `dsh://` 深链（成功页「打开应用」按钮）：仅打包态注册协议并接管 open-url
      // （debug 注册会把系统 `dsh:` 指向调试产物）。
-     #[cfg(not(debug_assertions))]
+-    #[cfg(not(debug_assertions))]
 -    crate::desktop::deep_link::init(&app_handle);
 +    // Global deep-link registration is disabled in this managed distribution.
  
      // 开机自启动：已安装且开启 auto_start 时拉起服务
      let app_for_start = app_handle.clone();
-@@ -1535,9 +1536,7 @@
+@@ -1535,9 +1535,7 @@
      // `deep-link` feature 只在单例在场时起作用：把二次启动携带的 `dsh://` URL
      // （成功页「打开应用」按钮）转发给主实例派发 open-url。
      #[cfg(not(debug_assertions))]
@@ -230,7 +291,7 @@
  
      // Windows/WebView2 上 wry 忽略 `for_main_frame_only`、把每个初始化脚本注入所有子 frame，
      // 而 Tauri 只在 main frame 定义 `window.__TAURI_INTERNALS__`；dsh GUI 所在的跨源 iframe
-@@ -1548,15 +1547,10 @@
+@@ -1548,15 +1546,10 @@
  
      let builder = builder
          // 官方跨平台登录启动实现：Windows HKCU Run、macOS LaunchAgent、Linux XDG。
@@ -247,7 +308,7 @@
          // FS plugin
          .plugin(tauri_plugin_fs::init())
          // HTTP plugin：桌宠窗口拉取远端宠物素材时把 fetch 交给 Rust 发起，
-@@ -1582,7 +1576,7 @@
+@@ -1582,7 +1575,7 @@
          .unwrap_or(false);
      #[cfg(not(target_os = "macos"))]
      let in_app_bundle = true;
@@ -256,7 +317,7 @@
          builder.plugin(tauri_plugin_notifications::init())
      } else {
          log::warn!(
-@@ -1595,7 +1589,7 @@
+@@ -1595,7 +1588,7 @@
      // `dsh://` 深链（成功页「打开应用」按钮）只在打包态启用：debug 注册会把系统
      // `dsh:` 指向调试产物，与官方 Electron 的 `app.isPackaged` 门禁一致。
      #[cfg(not(debug_assertions))]
@@ -483,140 +544,6 @@
              dirs.push(home.join(".local").join("bin"));
              append_unix_dsh_dirs(&mut dirs, &home);
          }
---- a/src-tauri/src/service/patch/browser_auth.rs
-+++ b/src-tauri/src/service/patch/browser_auth.rs
-@@ -0,0 +1,131 @@
-+//! browser-auth 载体补丁：让管理实例的本地桌面载体无需启动 token 即可访问内置 Web。
-+//!
-+//! 背景：dsh 核心自带启动鉴权以来，`dsh --profile web` 把 SPA 门禁在「每进程随机
-+//! 启动 token」之后——`GET /` 无有效 token / cookie 一律 401
-+//! （`@deepseek-ai/dsh-client-connection` 的 `BrowserAuth`）。社区桌面的设计是
-+//! 「alpha 鉴权由启动前的桌面端 patch 处理，iframe 永远不携带启动 token」
-+//! （见 `src/store/modules/harness/utils.ts`）：内嵌 iframe 用的是干净的
-+//! `http://127.0.0.1:<port>?t=…&dshDesktop=1`，从不带上 token；同时
-+//! `is_dsh_running` 的就绪探测也是无 token 的 `GET /`（要求 200）。
-+//!
-+//! 上游随桌面端发行的核心版本比本补丁集新，连接层新增了上述启动 token，而桌面端
-+//! 补丁集尚未覆盖它，于是：`GET /` 恒为 401 → 就绪探测永不通过 → 状态到不了
-+//! Running（也就不会落就绪文件），且内嵌 GUI 会显示鉴权提示。本补丁补齐上游缺失
-+//! 的「桌面端鉴权补丁」：把 `BrowserAuth.isAuthenticated` 判定改成恒真，等价于
-+//! 「本地载体已被信任」。
-+//!
-+//! 信任边界：Harness 只绑定 `127.0.0.1`，且 `/api` 另有 Origin/Referer 浏览器信任
-+//! 围栏（`--trusted-host`）拦截跨站请求；本补丁只取消「每进程启动 token」这一层，
-+//! 面向的是本机单用户隔离实例（自有端口、自有核心副本、自有 Electron user-data），
-+//! 与随包上游桌面端对其内嵌载体的既定处置一致。
-+//!
-+//! 目标选择：**活动核心**（本地核心或预打包核心），读写与幂等判定统一交给
-+//! [`crate::utils::patch_dsh`]；本模块只提供纯函数式补丁判定 [`patch_source`]。
-+//!
-+//! 幂等与容错：目标已含标记即跳过；文件缺失或锚点因上游布局变更找不到 → 跳过并
-+//! 告警，不阻断启动。挂点：`service::workflow::launch` 启动 dsh 进程前，与其余
-+//! 核心补丁同一位置（最佳努力，失败只告警）。
-+
-+use std::path::Path;
-+
-+use crate::utils::{patch_core_file, patch_dsh, PatchOutcome};
-+
-+/// 幂等标记：注入语句里带注释，重跑时直接命中「已打过」。
-+const MARKER: &str = "WhaleRealm managed carrier: trust local desktop requests";
-+
-+/// `BrowserAuth.isAuthenticated` 方法定义锚点（带方法名与形参，避免命中调用点）。
-+const ANCHOR: &str = "isAuthenticated(request) {";
-+
-+/// 相对活动核心安装目录的 dsh-client-connection 包内路径。
-+const CONNECTION_INDEX_JS: &str =
-+    "node_modules/@deepseek-ai/dsh-client-connection/lib/index.js";
-+
-+/// 幂等补丁逻辑的纯函数部分（便于单测，不触碰文件系统）。
-+///
-+/// 在 `isAuthenticated(request) {` 之后插入 `return true;`，按锚点所在行的**实际
-+/// 前导缩进**再进一级，避免上游产物缩进（tab/空格）变化时插出坏行。
-+fn patch_source(source: &str) -> PatchOutcome {
-+    if source.contains(MARKER) {
-+        return PatchOutcome::AlreadyPatched;
-+    }
-+    let Some(position) = source.find(ANCHOR) else {
-+        return PatchOutcome::AnchorMissing;
-+    };
-+    let after = position + ANCHOR.len();
-+    let line_start = source[..position]
-+        .rfind('\n')
-+        .map(|index| index + 1)
-+        .unwrap_or(0);
-+    let indent: String = source[line_start..position]
-+        .chars()
-+        .take_while(|character| *character == '\t' || *character == ' ')
-+        .collect();
-+    let body_indent = format!("{indent}\t");
-+    let mut patched = source.to_string();
-+    patched.insert_str(
-+        after,
-+        &format!("\n{body_indent}/* {MARKER} */\n{body_indent}return true;"),
-+    );
-+    PatchOutcome::Patched(patched)
-+}
-+
-+/// 对活动核心的 dsh-client-connection `lib/index.js` 应用补丁（幂等）。
-+/// 返回 Err 表示读/写失败；文件缺失、已打过、锚点变更均静默跳过（Ok）。
-+pub fn apply(app_handle: &tauri::AppHandle) -> Result<(), String> {
-+    patch_dsh(app_handle, CONNECTION_INDEX_JS, patch_source)
-+}
-+
-+/// 对显式给定的核心安装目录施加本补丁（E2E 编排复用，无需运行中的桌面端）。
-+pub fn apply_at(core_dir: &Path) -> Result<(), String> {
-+    patch_core_file(core_dir, CONNECTION_INDEX_JS, patch_source)
-+}
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+
-+    /// 上游打包产物里该类方法的最小上下文（单 tab 缩进）。
-+    const SOURCE: &str = "\t/** verify */\n\tisAuthenticated(request) {\n\t\tconst authority = requestAuthority(request.headers);\n\t\treturn true;\n\t}\n";
-+
-+    #[test]
-+    fn inserts_return_true_after_anchor() {
-+        match patch_source(SOURCE) {
-+            PatchOutcome::Patched(patched) => {
-+                assert!(patched.contains(MARKER));
-+                assert!(patched.contains(
-+                    "isAuthenticated(request) {\n\t\t/* WhaleRealm managed carrier: trust local desktop requests */\n\t\treturn true;\n\t\tconst authority"
-+                ));
-+            }
-+            other => panic!("expected Patched, got {other:?}"),
-+        }
-+    }
-+
-+    #[test]
-+    fn matches_double_tab_indentation() {
-+        let double_tab = "\t\tisAuthenticated(request) {\n\t\t\tconst authority = 0;\n";
-+        match patch_source(double_tab) {
-+            PatchOutcome::Patched(patched) => {
-+                // 插入体与锚点行对齐后再进一级（双 tab → 三 tab）
-+                assert!(patched.contains(
-+                    "isAuthenticated(request) {\n\t\t\t/* WhaleRealm managed carrier: trust local desktop requests */\n\t\t\treturn true;"
-+                ));
-+                assert!(!patched.contains("\n\t\treturn true;"));
-+            }
-+            other => panic!("expected Patched, got {other:?}"),
-+        }
-+    }
-+
-+    #[test]
-+    fn is_idempotent() {
-+        let PatchOutcome::Patched(patched) = patch_source(SOURCE) else {
-+            panic!("expected Patched");
-+        };
-+        assert_eq!(patch_source(&patched), PatchOutcome::AlreadyPatched);
-+    }
-+
-+    #[test]
-+    fn skips_when_anchor_missing() {
-+        let altered = "isAuthenticated(request, extra) {\n\treturn false;\n}\n";
-+        assert_eq!(patch_source(altered), PatchOutcome::AnchorMissing);
-+    }
-+}
 --- a/src-tauri/src/service/update/install.rs
 +++ b/src-tauri/src/service/update/install.rs
 @@ -23,7 +23,7 @@
@@ -662,6 +589,45 @@
      let Some(pending) = get(app_handle) else {
          return;
      };
+--- a/src-tauri/src/service/workflow/health.rs
++++ b/src-tauri/src/service/workflow/health.rs
+@@ -13,19 +13,23 @@
+         .map_err(|e| format!("HARNESS_HEALTH_CLIENT_FAILED: {e}"))?;
+     let root = format!("{}/", config::get_dsh_service_url(port));
+     let started = std::time::Instant::now();
+-    let response = client.get(root).send().await.map_err(|e| {
+-        log::warn!(
+-            "Harness boot manifest request failed: elapsed_ms={} connect={} timeout={} {e:?}",
+-            started.elapsed().as_millis(),
+-            e.is_connect(),
+-            e.is_timeout(),
+-        );
+-        format!(
+-            "HARNESS_BOOT_MANIFEST_REQUEST_FAILED: connect={} timeout={} {e:?}",
+-            e.is_connect(),
+-            e.is_timeout(),
+-        )
+-    })?;
++    // 携带该实例的每实例凭据（启动 token 交换所得会话 cookie）：随行核心把内置 Web
++    // 门禁在每进程启动 token 之后，裸 `GET /` 会 401。凭据尚未捕获时退化为裸请求。
++    let response = utils::authorized_root_get(&client, port, &root)
++        .await
++        .map_err(|e| {
++            log::warn!(
++                "Harness boot manifest request failed: elapsed_ms={} connect={} timeout={} {e:?}",
++                started.elapsed().as_millis(),
++                e.is_connect(),
++                e.is_timeout(),
++            );
++            format!(
++                "HARNESS_BOOT_MANIFEST_REQUEST_FAILED: connect={} timeout={} {e:?}",
++                e.is_connect(),
++                e.is_timeout(),
++            )
++        })?;
+     if !response.status().is_success() {
+         return Err(format!(
+             "HARNESS_NOT_READY: boot page returned {}",
 --- a/src-tauri/src/service/workflow/install.rs
 +++ b/src-tauri/src/service/workflow/install.rs
 @@ -17,6 +17,7 @@
@@ -704,20 +670,18 @@
      if available_port != setting.port {
          log::info!(
              "Harness port changed from {} to {} because the configured port is occupied",
-@@ -449,6 +456,13 @@
-     // 前端做幂等补丁。最佳努力且幂等：锚点缺失（上游改写布局）时安全跳过。
+@@ -450,6 +457,11 @@
      if let Err(e) = crate::service::patch::plugin_visibility::apply(&app_handle) {
          log::warn!("plugin visibility patch failed: {e}");
-+    }
-+    // 桌面载体鉴权补丁：随行核心把内置 Web 门禁在「每进程启动 token」之后，而无 token
-+    // 的内嵌 iframe 与 `is_dsh_running` 的就绪探测都需要裸 `GET /`。补齐上游缺失的
-+    // 「桌面端鉴权补丁」，让本地载体免 token 访问（信任边界见 service::patch::browser_auth）。
-+    // 最佳努力且幂等：目标已打过或锚点缺失时安全跳过。
-+    if let Err(e) = crate::service::patch::browser_auth::apply(&app_handle) {
-+        log::warn!("browser auth carrier patch failed: {e}");
      }
++    // 桌面载体鉴权改为**每实例凭据传递**（不再改写核心 JS 的 isAuthenticated 判定）：
++    // 核心自身启动时打印的认证 URL（`dsh web: …?token=…`）由 `service::workflow::utils`
++    // 在子进程输出读取处捕获，供就绪探测（`service::workflow::health`）与内嵌 iframe
++    // （`config::runtime_info`）复用。无凭据请求仍被核心的 401 拒绝；凭据按实例天然隔离
++    // （进程随机启动 token + 权威绑定签名 cookie），实例 A 的凭据在实例 B 上无效。
      mark_phase("core_patches", &mut phase_started);
      // 预防性处理：pnpm 在无 TTY 环境（dsh-market 等子进程）下重装/更新插件时，
+     // 清理/重建 node_modules 会触发交互确认并因无 TTY 直接中止
 --- a/src-tauri/src/service/workflow/process.rs
 +++ b/src-tauri/src/service/workflow/process.rs
 @@ -504,6 +504,7 @@
@@ -748,6 +712,209 @@
      if has_owned_process() {
          return;
      }
+--- a/src-tauri/src/service/workflow/utils.rs
++++ b/src-tauri/src/service/workflow/utils.rs
+@@ -1,3 +1,4 @@
++use std::collections::HashMap;
+ use std::io::{BufRead, BufReader, Read, Write};
+ use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener};
+ use std::path::{Path, PathBuf};
+@@ -139,6 +140,132 @@
+     true
+ }
+ 
++// ===== 桌面载体每实例凭据（browser-auth carrier）=====
++//
++// 随行核心把内置 Web 门禁在「每进程随机启动 token」之后：`GET /` 与 `/api` 若无有效
++// token/cookie 一律 401（见 `@deepseek-ai/dsh-client-connection` 的 `BrowserAuth`）。
++// 旧桌面补丁把 `isAuthenticated` 改成恒真以绕过它——那会信任任何能连到回环端口的
++// 本地进程，是公开发布前必须消除的安全缺陷。
++//
++// 这里改为**每实例凭据传递**：直接复用核心自身启动时打印的认证 URL
++// （`dsh web: http://127.0.0.1:<port>/?token=<每进程随机 token>`），把该 token 交换
++// 成权威绑定的会话 cookie，供 Rust 侧的就绪探测与 `/api` 代理使用；内嵌 iframe 由
++// [`crate::config::runtime_info`] 把同一 token 拼进 URL，交给核心自带的
++// `authorizeIndex` 303 换 cookie 流程。
++//
++// 凭据天然每实例隔离：启动 token 是进程级随机值（`processLaunchToken`），会话 cookie
++// 用该实例档案的持久签名密钥签发并绑定请求权威（host:port）——实例 A 的 token/cookie
++// 在实例 B 上都校验失败，无凭据请求仍是 401。
++
++static CARRIER_TOKENS: OnceLock<Mutex<HashMap<u16, String>>> = OnceLock::new();
++
++fn carrier_tokens() -> &'static Mutex<HashMap<u16, String>> {
++    CARRIER_TOKENS.get_or_init(|| Mutex::new(HashMap::new()))
++}
++
++/// 解析核心启动时打印的认证 URL 行，取出 `(port, token)`。
++///
++/// 形如 `dsh web: http://127.0.0.1:23851/?token=<token>`，可能尾随
++/// ` (LAN: http://<lan>:<port>/?token=<token>)`；只接受回环主机。
++pub(super) fn parse_launch_token(line: &str) -> Option<(u16, String)> {
++    const MARKER: &str = "dsh web: ";
++    let start = line.find(MARKER)? + MARKER.len();
++    let candidate = line[start..].split_whitespace().next()?;
++    let url = reqwest::Url::parse(candidate).ok()?;
++    let host = url.host_str()?;
++    if host != "127.0.0.1" && host != "localhost" {
++        return None;
++    }
++    let port = url.port()?;
++    let token = url
++        .query_pairs()
++        .find(|(key, _)| key == "token")
++        .map(|(_, value)| value.into_owned())?;
++    if token.is_empty() {
++        return None;
++    }
++    Some((port, token))
++}
++
++/// 观测一行子进程输出；命中认证 URL 时记录该端口的每实例凭据（幂等）。
++pub(super) fn observe_carrier_line(line: &str) {
++    if let Some((port, token)) = parse_launch_token(line) {
++        if let Ok(mut map) = carrier_tokens().lock() {
++            if map.insert(port, token).is_none() {
++                log::info!("Carrier launch credential captured for port {port}");
++            }
++        }
++    }
++}
++
++/// 该端口的每实例启动 token（尚未捕获时为 `None`）。
++pub(crate) fn carrier_token(port: u16) -> Option<String> {
++    carrier_tokens()
++        .lock()
++        .ok()
++        .and_then(|map| map.get(&port).cloned())
++}
++
++/// 带每实例凭据的认证 URL（尚未捕获凭据时为 `None`）。
++pub(crate) fn carrier_url(port: u16) -> Option<String> {
++    carrier_token(port).map(|token| {
++        format!(
++            "{}/?token={}",
++            crate::config::get_dsh_service_url(port),
++            token
++        )
++    })
++}
++
++/// 用每实例 token 交换权威绑定的会话 cookie（核心 `authorizeIndex` 的 303 + `Set-Cookie`）。
++pub(crate) async fn carrier_cookie(port: u16) -> Option<String> {
++    let token = carrier_token(port)?;
++    let client = reqwest::Client::builder()
++        .no_proxy()
++        .timeout(Duration::from_secs(8))
++        .redirect(reqwest::redirect::Policy::none())
++        .build()
++        .ok()?;
++    let root = format!("{}/", crate::config::get_dsh_service_url(port));
++    let response = client
++        .get(&root)
++        .query(&[("token", token.as_str())])
++        .send()
++        .await
++        .ok()?;
++    response
++        .headers()
++        .get(reqwest::header::SET_COOKIE)
++        .and_then(|value| value.to_str().ok())
++        .and_then(|value| value.split(';').next())
++        .map(str::to_string)
++}
++
++/// 用会话 cookie 认证一次 `GET /`。
++///
++/// 有每实例凭据时先用 token 换 cookie（核心的 `authorizeIndex`：`GET /?token=<正确
++/// token>` → 303 + `Set-Cookie`），再用该 cookie 重新请求根路径；未捕获凭据（旧核心无
++/// 门禁或凭据尚未打印）时退化为裸 `GET /`。
++pub(super) async fn authorized_root_get(
++    client: &reqwest::Client,
++    port: u16,
++    root: &str,
++) -> Result<reqwest::Response, reqwest::Error> {
++    if carrier_token(port).is_none() {
++        return client.get(root).send().await;
++    }
++    match carrier_cookie(port).await {
++        Some(cookie) => {
++            client
++                .get(root)
++                .header(reqwest::header::COOKIE, cookie)
++                .send()
++                .await
++        }
++        None => client.get(root).send().await,
++    }
++}
++
+ /// 检查 Harness 是否真正在运行（探测指定端口，随配置端口联动）
+ pub async fn is_dsh_running(port: u16) -> bool {
+     let client = loopback_http_client(Duration::from_secs(2)).ok(); // 将 Result 转为 Option
+@@ -151,9 +278,9 @@
+ 
+     let url = format!("{}/", crate::config::get_dsh_service_url(port));
+ 
+-    // 发送请求并判断是否就绪
++    // 发送请求并判断是否就绪（携带该实例的每实例凭据）
+     let check_status = async {
+-        let resp = client.get(&url).send().await.ok()?;
++        let resp = authorized_root_get(&client, port, &url).await.ok()?;
+         if resp.status() != reqwest::StatusCode::OK {
+             return None;
+         }
+@@ -222,7 +349,11 @@
+                 let line = decode_process_line(bytes);
+                 match level {
+                     log::Level::Warn => log::warn!(target: "dsh", "{}", line),
+-                    _ => log::info!(target: "dsh", "{}", line),
++                    _ => {
++                        // 捕获核心启动时打印的每实例认证凭据（`dsh web: …?token=…`）。
++                        observe_carrier_line(&line);
++                        log::info!(target: "dsh", "{}", line);
++                    }
+                 }
+                 append_log(&log_path, &line);
+             }
+@@ -498,6 +629,37 @@
+             .any(|u| u.contains("dsh-client-modules/client.js")));
+     }
+ 
++    /// 载体凭据解析：只接受回环主机的 `dsh web: <url>?token=…`，忽略其后的 LAN 变体。
++    #[test]
++    fn parse_launch_token_reads_loopback_only() {
++        let line = "dsh web: http://127.0.0.1:23851/?token=Vw28skQWPY4xYBZlg4VzQ2s-YTF8qLJIcv4SyFXnXM4 (LAN: http://10.0.0.5:23851/?token=other)";
++        assert_eq!(
++            parse_launch_token(line),
++            Some((23851, "Vw28skQWPY4xYBZlg4VzQ2s-YTF8qLJIcv4SyFXnXM4".to_string()))
++        );
++        assert_eq!(
++            parse_launch_token("dsh web: http://localhost:3081/?token=abc"),
++            Some((3081, "abc".to_string()))
++        );
++        // 非回环主机、缺失 token、非认证行都应拒绝
++        assert_eq!(parse_launch_token("dsh web: http://10.0.0.5:3081/?token=abc"), None);
++        assert_eq!(parse_launch_token("dsh web: http://127.0.0.1:3081/"), None);
++        assert_eq!(parse_launch_token("noise"), None);
++    }
++
++    /// 观测到的每实例凭据按端口登记，并可生成带凭据的认证 URL。
++    #[test]
++    fn carrier_records_token_and_builds_authenticated_url() {
++        observe_carrier_line("dsh web: http://127.0.0.1:3099/?token=tok-3099");
++        assert_eq!(carrier_token(3099), Some("tok-3099".to_string()));
++        assert_eq!(
++            carrier_url(3099),
++            Some("http://127.0.0.1:3099/?token=tok-3099".to_string())
++        );
++        // 未登记的端口没有凭据。
++        assert_eq!(carrier_token(3098), None);
++    }
++
+     #[test]
+     fn spa_html_fallback_is_not_a_plugin_bundle() {
+         assert!(!looks_like_plugin_bundle(
 --- a/src-tauri/tauri.conf.json
 +++ b/src-tauri/tauri.conf.json
 @@ -2,7 +2,7 @@

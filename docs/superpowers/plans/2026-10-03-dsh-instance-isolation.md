@@ -8,13 +8,13 @@
 
 **Tech Stack:** Windows x64、现有 Electron/React/TypeScript/Vitest；官方 Web 的便携 Node/npm；官方 Desktop 上游构建；社区 Desktop 的 Tauri/Rust 构建。
 
-**Spec:** `D:/Dsh-Hub-HIDM/docs/superpowers/specs/2026-10-03-dsh-instance-isolation-design.md`
+**Spec:** `<workdir>/docs/superpowers/specs/2026-10-03-dsh-instance-isolation-design.md`
 
 ## Global Constraints
 
 - 三种形态都是最终交付目标，不能仅禁用桌面创建就宣称完成。
 - 不在用户主机执行 DSH 普通安装器；免安装包也必须验证运行时副作用。
-- 当前 3080 实例、`C:\Users\Lenovo\.dsh`、`D:\DSH-Desktop` 不作为试装、自检、恢复或修改目标。
+- 当前 3080 实例、`<user-profile>\.dsh`、`D:\DSH-Desktop` 不作为试装、自检、恢复或修改目标。
 - 已有实例继续使用现有路径记录，不自动迁移或移动用户数据。
 - 不修改现有 GPL 正式全文；新增自有源码保留项目版权头。
 - 创建失败只清理任务拥有的文件；退出失败不得伪报停止成功。

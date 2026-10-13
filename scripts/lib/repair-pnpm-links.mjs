@@ -23,6 +23,11 @@
 /**
  * Dependency link integrity repair for pnpm `node-linker=isolated` layouts.
  *
+ * depPathToFilename / depPathToFilenameUnescaped are derived from pnpm 11.7.0:
+ * Copyright (c) 2015-2016 Rico Sta. Cruz and other contributors
+ * Copyright (c) 2016-2025 Zoltan Kochan and other contributors
+ * These portions retain the MIT License; see ../../licenses/pnpm/LICENSE.
+ *
  * In the build sandbox pnpm 11.7 completes installs ("Done in Ns", exit 0, "Already
  * up to date" on re-runs) while creating zero dependency links: package content
  * directories and `.bin` shims are materialized under `node_modules/.pnpm`, but

@@ -112,6 +112,7 @@ export const zhCN = {
   'tray.clickHint': ' · 单击功能 / 双击启动',
   'tray.emptyRunning': '暂无运行中的实例',
   'tray.emptyStopped': '暂无未启动实例',
+  'tray.actionFailed': '操作失败',
   'tray.settingsPanel': '设置',
   'tray.settingsPanelAria': '托盘设置面板',
   'tray.closeSettingsAria': '关闭设置',
@@ -661,6 +662,8 @@ export const zhCN = {
   'toast.shortcutsTrashed': '已将 {count} 个快捷方式移入回收站。',
   'toast.settingsSaved': '设置已保存。',
   'toast.deleteFailed': '删除失败',
+  'toast.deleteOwnershipBlocked': '该实例由旧版创建，无法自动删除文件（安全保护）。请改用「仅移除注册」，文件将保留。',
+  'toast.openInstanceFolder': '打开实例文件夹',
   'toast.usageFailed': '读取本地用量失败',
 } as const
 

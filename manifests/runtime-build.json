@@ -4,8 +4,8 @@
   "officialCommit": "c36a83ff6bb95e3f82cf79f9be7c724270a8aa61",
   "version": "0.1.7-alpha.1",
   "platform": "win-x64",
-  "runtimeRoot": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1",
-  "runner": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1\\DeepSeek Harness.exe",
+  "runtimeRoot": "<workdir>\\runtimes\\0.1.7-alpha.1",
+  "runner": "<workdir>\\runtimes\\0.1.7-alpha.1\\DeepSeek Harness.exe",
   "built": true,
   "verified": true,
   "unsigned": true,
@@ -22,7 +22,7 @@
     "appAsarSizeMb": 109.7,
     "robocopyFailedFiles": 0,
     "robocopyMismatchFiles": 0,
-    "sourceDirectory": "D:\\Dsh-Hub-HIDM\\upstream\\deepseek-harness\\apps\\desktop\\.desktop-build\\targets\\win-x64\\unsigned-artifacts\\win-unpacked"
+    "sourceDirectory": "<workdir>\\upstream\\deepseek-harness\\apps\\desktop\\.desktop-build\\targets\\win-x64\\unsigned-artifacts\\win-unpacked"
   },
   "buildMethod": {
     "note": "The official nested pipeline 'pnpm package:desktop:win:x64:unsigned' aborts inside prepare:dsh because pnpm exits 2147483651 (0x80000003) with 'PostQueuedCompletionStatus: (6)' when spawned as a deep child process in this harness. The identical electron+pnpm command succeeds when run top-level, which isolates the cause to the nested child-process boundary rather than the official source. Each official step was then executed top-level, unmodified, with the official scripts and configuration.",

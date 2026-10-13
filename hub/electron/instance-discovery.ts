@@ -39,7 +39,7 @@
  */
 import { execSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, resolve as resolvePath, sep } from 'node:path'
+import { dirname, join, resolve as resolvePath, sep } from 'node:path'
 import type { InstanceKind } from '../src/types'
 
 export type DiscoverSource = 'drive-top' | 'programs' | 'localappdata' | 'registry' | 'running-process' | 'manual'
@@ -212,7 +212,17 @@ export function verifyInstall(dir: string): boolean {
 export function loadCatalog(catalogPath: string): RuntimeCatalogEntry[] {
   try {
     const parsed = JSON.parse(readFileSync(catalogPath, 'utf8')) as { entries?: RuntimeCatalogEntry[] }
-    return Array.isArray(parsed.entries) ? parsed.entries : []
+    const entries = Array.isArray(parsed.entries) ? parsed.entries : []
+    // 机器无关占位符：公开仓库不得含构建机绝对路径，故目录表用 `<hubRuntimes>` 表示
+    // 「本机 Hub 自带运行体根」。catalogPath = <hubRoot>/manifests/runtime-catalog.json，
+    // 因此 hub 运行时根 = <hubRoot>/runtimes；加载时按本机实际位置展开，语义等价于原绝对前缀匹配。
+    const hubRuntimes = resolvePath(dirname(catalogPath), '..', 'runtimes')
+    for (const entry of entries) {
+      if (entry && typeof entry.matchPathPrefix === 'string' && entry.matchPathPrefix.includes('<hubRuntimes>')) {
+        entry.matchPathPrefix = entry.matchPathPrefix.split('<hubRuntimes>').join(hubRuntimes)
+      }
+    }
+    return entries
   } catch {
     return []
   }

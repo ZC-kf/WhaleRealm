@@ -9,7 +9,7 @@
   },
   "runner": {
     "built": true,
-    "path": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1\\DeepSeek Harness.exe",
+    "path": "<workdir>\\runtimes\\0.1.7-alpha.1\\DeepSeek Harness.exe",
     "executableSha256": "7c484b12eb490b74cad478b68bd4a057b91de376a6b470465f9679f9472f2453",
     "executableBytes": 244465152,
     "stagedFiles": 10337,
@@ -32,11 +32,11 @@
         "portListenerPid": 25208,
         "listenerInsideInstanceTree": true,
         "visibleDesktopWindow": "Chrome_WidgetWin_1 title='DeepSeek Harness'",
-        "dshHome": "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\dsh-home",
-        "userData": "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\electron-user-data",
-        "desktopProfile": "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\dsh-home\\profiles\\desktop",
+        "dshHome": "<workdir>\\instances\\smoke-a\\dsh-home",
+        "userData": "<workdir>\\instances\\smoke-a\\electron-user-data",
+        "desktopProfile": "<workdir>\\instances\\smoke-a\\dsh-home\\profiles\\desktop",
         "lockName": "dsh-desktop-smoke-a",
-        "skillPath": "D:\\Dsh-Hub-HIDM\\instances\\smoke-a\\dsh-home\\skills\\smoke-probe",
+        "skillPath": "<workdir>\\instances\\smoke-a\\dsh-home\\skills\\smoke-probe",
         "userDataFiles": 58,
         "desktopProfileFiles": 4,
         "skillFiles": 1,
@@ -49,11 +49,11 @@
         "portListenerPid": 27796,
         "listenerInsideInstanceTree": true,
         "visibleDesktopWindow": "Chrome_WidgetWin_1 title='DeepSeek Harness'",
-        "dshHome": "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\dsh-home",
-        "userData": "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\electron-user-data",
-        "desktopProfile": "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\dsh-home\\profiles\\desktop",
+        "dshHome": "<workdir>\\instances\\smoke-b\\dsh-home",
+        "userData": "<workdir>\\instances\\smoke-b\\electron-user-data",
+        "desktopProfile": "<workdir>\\instances\\smoke-b\\dsh-home\\profiles\\desktop",
         "lockName": "dsh-desktop-smoke-b",
-        "skillPath": "D:\\Dsh-Hub-HIDM\\instances\\smoke-b\\dsh-home\\skills\\smoke-probe",
+        "skillPath": "<workdir>\\instances\\smoke-b\\dsh-home\\skills\\smoke-probe",
         "userDataFiles": 58,
         "desktopProfileFiles": 4,
         "skillFiles": 1,
@@ -74,7 +74,7 @@
     "listeningBeforeAndAfter": true,
     "userDataPreferencesLastWrite": "2026-09-23T15:51:59 (unchanged by smoke runs)",
     "mutated": false,
-    "note": "C:\\Users\\Lenovo\\.dsh and the live Electron userData were never written by the smoke instances."
+    "note": "<user-profile>\\.dsh and the live Electron userData were never written by the smoke instances."
   },
   "defectsFoundAndFixedByRuntimeEvidence": [
     {
@@ -104,7 +104,7 @@
   },
   "hubShell": {
     "packaged": true,
-    "executable": "D:\\Dsh-Hub-HIDM\\hub\\release\\win-unpacked\\DSH Launcher.exe",
+    "executable": "<workdir>\\hub\\release\\win-unpacked\\DSH Launcher.exe",
     "executableBytes": 239076352,
     "executableSha256": "c088bb218357b40ffdd9b35de2680496f2e1f471ca850f6d0887e8b1e5b7aeb0",
     "electron": "43.7.3",
@@ -124,7 +124,7 @@
       "stopOutput": "Hub stopped (PID 23644); no Hub processes remain.",
       "processesAfterStop": 0,
       "idempotentSecondStop": "Hub is not running. (exit 0)",
-      "hubUserData": "C:\\Users\\Lenovo\\AppData\\Roaming\\dsh-launcher (51 files) - separate from the live instance's 'DeepSeek Harness' userData"
+      "hubUserData": "<user-profile>\\AppData\\Roaming\\dsh-launcher (51 files) - separate from the live instance's 'DeepSeek Harness' userData"
     },
     "defectsFoundAndFixed": [
       "start-hub.ps1 and stop-hub.ps1 pointed at hub/release/DSH Launcher.exe, which the --dir build never produces; corrected to hub/release/win-unpacked/DSH Launcher.exe.",
@@ -138,8 +138,8 @@
     "exposedApi": "window.launcher is an object exposing createInstance, listInstanceStates, listInstances, restartInstance, selectInstance, startInstance, stopInstance",
     "registryPersistence": "listInstances returned smoke-a and smoke-b created by an earlier Hub process, proving hub-data/instances.json survives Hub restarts",
     "created": [
-      { "id": "gui-a", "port": 19401, "lockName": "dsh-desktop-gui-a", "runtimeRoot": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1", "dshHome": "D:\\Dsh-Hub-HIDM\\instances\\gui-a\\dsh-home", "electronUserData": "D:\\Dsh-Hub-HIDM\\instances\\gui-a\\electron-user-data", "desktopProfile": "D:\\Dsh-Hub-HIDM\\instances\\gui-a\\dsh-home\\profiles\\desktop" },
-      { "id": "gui-b", "port": 19402, "lockName": "dsh-desktop-gui-b", "runtimeRoot": "D:\\Dsh-Hub-HIDM\\runtimes\\0.1.7-alpha.1", "dshHome": "D:\\Dsh-Hub-HIDM\\instances\\gui-b\\dsh-home", "electronUserData": "D:\\Dsh-Hub-HIDM\\instances\\gui-b\\electron-user-data", "desktopProfile": "D:\\Dsh-Hub-HIDM\\instances\\gui-b\\dsh-home\\profiles\\desktop" }
+      { "id": "gui-a", "port": 19401, "lockName": "dsh-desktop-gui-a", "runtimeRoot": "<workdir>\\runtimes\\0.1.7-alpha.1", "dshHome": "<workdir>\\instances\\gui-a\\dsh-home", "electronUserData": "<workdir>\\instances\\gui-a\\electron-user-data", "desktopProfile": "<workdir>\\instances\\gui-a\\dsh-home\\profiles\\desktop" },
+      { "id": "gui-b", "port": 19402, "lockName": "dsh-desktop-gui-b", "runtimeRoot": "<workdir>\\runtimes\\0.1.7-alpha.1", "dshHome": "<workdir>\\instances\\gui-b\\dsh-home", "electronUserData": "<workdir>\\instances\\gui-b\\electron-user-data", "desktopProfile": "<workdir>\\instances\\gui-b\\dsh-home\\profiles\\desktop" }
     ],
     "hubReportedStates": [
       { "instanceId": "gui-a", "status": "ready", "pid": 24672, "url": "http://127.0.0.1:19401" },
