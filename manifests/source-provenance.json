@@ -161,25 +161,25 @@
       "name": "community-desktop-runtime",
       "displayName": "社区 Desktop 运行体（deepseek-harness-desktop）",
       "version": "0.21.0",
-      "classification": "external-download",
+      "classification": "bundled",
       "origin": {
         "sourceRef": "aff39a991fda3558c5459b54fb3fa1c6984d3227",
-        "patchSha256": "fe26651c76f60255ce88d1f867412cd2a0d313afa7be320bd16bb7c855f9cc7f",
-        "assetId": "community-desktop:0.21.0:fe26651c76f6",
-        "artifact": "D:/Dsh-Hub-HIDM/imports/isolation-build/community-managed-build-r3/community-desktop-0.21.0-win-x64.zip",
-        "artifactBytes": 196896167,
-        "integrity": "sha512-+2FYw+mQY32fb0+kJxuVcPXJdHzrT+H4hThG1ePDX5Hy68H3/L9Q6aQrZt/fbFT0zrNLvqXqCTHFsbIKBRGt0g==",
-        "receiptSha256": "0bf9bf397a1576d53ddf04b44c8529897821fecf6ac4cce73f4bfee3ec7ddd67"
+        "patchSha256": "0721481697128c0715e31170fb4799eda9aaa1abd8df3e9cc5e0e8ea7f242906",
+        "assetId": "community-desktop:0.21.0:072148169712",
+        "artifact": "resources/runtimes/community-desktop-0.21.0-win-x64.zip",
+        "artifactBytes": 196911453,
+        "integrity": "sha512-pKKkTa4kFmwshgW9t6afgMQF2w85/UuLPxD8GyhmQ7MhbTOBv/v7uaob5z/+Xig5M1sS0v5bXXQmNdg/53q/WQ==",
+        "receiptSha256": "08920bf889983c2f895012a46a84cf8bcd8c67efc17c7e88dbccf4120b95a45e"
       },
       "license": "MIT + 附加条款（Additional Terms — No Commercial Secondary Development）",
-      "licenseFile": "imports/isolation-build/community-managed-build-r3/portable/source-notices/LICENSE",
+      "licenseFile": "community-desktop-runtime/source-notices/LICENSE",
       "licenseSha256": "a9a6b4fb724c6a42f68cc377969ee2816035367ab127aceba7f6af9da3656e5d",
       "additionalTerms": {
-        "file": "imports/isolation-build/community-managed-build-r3/portable/source-notices/LICENSE.details",
+        "file": "community-desktop-runtime/source-notices/LICENSE.details",
         "summary": "MIT 之外附加『禁止商业化二次开发』条款；直接使用不受限。"
       },
       "copiedSource": {
-        "patchDigest": "fe26651c76f60255ce88d1f867412cd2a0d313afa7be320bd16bb7c855f9cc7f",
+        "patchDigest": "0721481697128c0715e31170fb4799eda9aaa1abd8df3e9cc5e0e8ea7f242906",
         "patchFiles": [
           "runtime-sources/community-desktop/patches/（files.json + managed.patch）"
         ],
@@ -187,7 +187,7 @@
       },
       "provenance": {
         "status": "verified",
-        "evidence": "已通过真实双实例验收并写入可信清单（manifest certified：assetId community-desktop:0.21.0:fe26651c76f6，evidenceSha256 0f2872a0…）；上游仓库 MIT + 附加条款随 source-notices 原样分发。"
+        "evidence": "Managed r5: certified by the exact acceptance evidence digest recorded in isolated-runtimes.json. Bundled in both Hub artifacts under resources/runtimes/. Upstream license and additional terms are preserved in source-notices; Node, pnpm and npm dependency licenses remain in the runtime resources tree."
       }
     },
     {
@@ -227,7 +227,7 @@
   "toolchain": {
     "note": "构建/开发依赖（TypeScript、Vite、electron-builder、Vitest 等）不进分发包，其完整解析树由 hub/package-lock.json（lockfileVersion 3，2026-10-08 重建）与 hub/pnpm-lock.yaml 记录；单独分发构建工具时须另行生成清单。"
   },
-  "localEvidenceNote": "本文件中的路径（artifact/licenseFile 等）指向构建机的本地证据工作区（imports/isolation-build/**），用于验收核对；公开源码仓库不含这些路径指向的运行体二进制（external-dependency 运行体按需获取）。",
+  "localEvidenceNote": "Bundled community runtime paths describe the runtime ZIP contents. Development-only imports paths used by unshipped candidates are local evidence references, not public download URLs.",
   "unresolvedIssues": [
     {
       "id": "hub-assets-origin",

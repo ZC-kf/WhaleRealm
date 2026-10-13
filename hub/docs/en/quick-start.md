@@ -62,3 +62,7 @@ Closing the main window keeps WhaleRealm in the tray by default. The tray panel 
 - "Instance Import and Operation" explains the full import, isolation and mirror mechanisms.
 - "Internals and Technical Overview" explains the implementation.
 - Check "FAQ and Troubleshooting" first when something goes wrong.
+
+## Updates in 1.0.0
+
+Startup update checks only notify you about the latest stable GitHub release. Automatic checks can be disabled in Settings. The update button opens the release page. Download the installer, stop instances and exit WhaleRealm before installing manually. This version does not perform unattended silent installation or promise automatic restart or post-install rollback.

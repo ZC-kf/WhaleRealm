@@ -34,6 +34,6 @@
 ### 说明
 
 - Electron 虽列于 devDependencies，但其二进制随软件分发，故按分发组件对待，不因 dev 标志豁免。
-- 社区桌面运行体（community-desktop）随本安装包分发，位于 `resources/runtimes/community-desktop-0.21.0-win-x64.zip`；其完整第三方声明随运行体自身携带（压缩包内 `source-notices/`），来源与哈希记录见 `manifests/source-provenance.json`。
+- 社区桌面运行体（community-desktop）随本安装包分发，位于 `resources/runtimes/community-desktop-0.21.0-win-x64.zip`；其上游许可证与附加条款位于压缩包内 `source-notices/`，Node.js、pnpm 与 npm 依赖的许可保留在各自 `resources/` 子目录，来源与哈希记录见 `manifests/source-provenance.json`。
 - 官方桌面版与 Web 运行体（Node.js 发行版、@deepseek-ai/dsh 等）仍为新建实例时按需下载，不随本软件分发；其许可与来源记录见 `manifests/source-provenance.json` 与各运行体自带的声明文件。
 - 构建/开发依赖不进分发包，其许可清单由 `hub/package-lock.json` 记录，不在此重复列举。

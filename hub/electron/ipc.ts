@@ -30,7 +30,7 @@ import type { SettingsStore } from './settings'
 import { clearCardBackgrounds, clearLauncherBackgrounds, clearSettingsBackgrounds, clearTrayBackgrounds, importCardBackground, importLauncherBackground, importSettingsBackground, importTrayBackground, saveTrayBackgroundBuffer } from './launcher-asset'
 import { readDshUsage } from './dsh-usage'
 import type { DeepSeekBalanceService } from './deepseek-balance'
-import { checkRelease, downloadRelease, installRelease } from './project-release'
+import { checkRelease, downloadRelease } from './project-release'
 
 /**
  * 渲染层能触达主进程的全部入口（实例生命周期通道由 registerInstanceIpcHandlers 单独注册）。
@@ -156,8 +156,7 @@ export function registerIpcHandlers(deps: IpcDependencies): void {
     clipboard.writeText(text)
   })
   // ===== 受信发行通道（project-release.ts，主进程统一实现）=====
-  // 渲染层不再能传任意下载地址或安装路径：check/download/install 都只在主进程
-  // 侧按固定仓库身份 + 摘要凭据执行，任意路径在 installRelease 内部直接拒绝。
+  // 检查和下载仅使用固定仓库与摘要凭据；进程内安装入口停用，用户退出后手动安装。
   const jsonFetch = async (url: string, init?: { headers?: Record<string, string> }) => {
     const response = await net.fetch(url, init)
     return { ok: response.ok, status: response.status, json: () => response.json() as Promise<unknown> }
@@ -173,16 +172,8 @@ export function registerIpcHandlers(deps: IpcDependencies): void {
   })
   ipcMain.handle(IPC.releaseInstall, async (_event, artifactId: unknown) => {
     if (typeof artifactId !== 'string' || !artifactId) throw new Error('产物句柄无效。')
-    await installRelease(artifactId, {
-      stagingDir: deps.releaseStagingDir,
-      runInstaller: (file, args) => new Promise(resolve => {
-        // NSIS 静默安装（/S）；等待退出码后再做受保护数据摘要对比。
-        const child = spawn(file, args, { detached: true, stdio: 'ignore' })
-        child.on('exit', code => resolve({ code: code ?? -1 }))
-        child.on('error', () => resolve({ code: -1 }))
-      }),
-      protectedPaths: await deps.releaseProtectedPaths(),
-    })
+    // NSIS closes the running Hub, so this process cannot verify or finish its own update.
+    throw new Error('请从 GitHub 发行页下载安装包，停止实例并退出鲸域后手动安装。 / Download the installer from GitHub, stop instances and exit WhaleRealm, then install manually.')
   })
   ipcMain.handle(IPC.updateRestart, () => {
     spawn(process.execPath, [], { detached: true, stdio: 'ignore' }).unref()

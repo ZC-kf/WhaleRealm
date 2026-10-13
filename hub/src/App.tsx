@@ -36,7 +36,7 @@ import { I18nProvider, translate, useI18n } from './i18n'
 import { DEFAULT_LANGUAGE } from './i18n/locales'
 import type { TranslationKey } from './i18n/translations/zh-CN'
 import type { UnfinishedCreateTask, ProjectReleaseInfo } from './types'
-import { isNewer, runUpdateFlow, type UpdateStage } from './update'
+import { isNewer } from './update'
 import packageMetadata from '../package.json'
 
 /**
@@ -60,12 +60,9 @@ function LauncherShell() {
   const [settingsSection, setSettingsSection] = useState<string | undefined>(undefined)
   const [isMaximized, setIsMaximized] = useState(false)
   const [updateInfo, setUpdateInfo] = useState<ProjectReleaseInfo | null>(null)
-  const [updateStage, setUpdateStage] = useState<UpdateStage | null>(null)
   const [updateError, setUpdateError] = useState<string | null>(null)
-  const [restartCountdown, setRestartCountdown] = useState<number | null>(null)
   const [unfinishedCreates, setUnfinishedCreates] = useState<UnfinishedCreateTask[] | null>(null)
   const updateDismissedRef = useRef(false)
-  const updateBusyRef = useRef(false)
 
   // App 层（Provider 之外）的语言感知翻译，供 toast 文案使用。
   const t = (key: TranslationKey, params?: Record<string, string | number>) =>
@@ -73,79 +70,34 @@ function LauncherShell() {
 
   const dismissUpdate = () => {
     updateDismissedRef.current = true
-    // 流程未到安装完成时允许关闭弹窗（已停止的实例可再启动；稍后可从设置重新发起）。
     setUpdateInfo(null)
-    setUpdateStage(null)
-    setRestartCountdown(null)
+    setUpdateError(null)
   }
 
-  const restartNow = () => {
-    setRestartCountdown(null)
-    void api.restartApp()
-  }
-
-  // 受信更新流程：提示 → 停止实例（含确认）→ 下载 → 校验 → 安装 → 延迟重启。
-  // 下载与安装全部走主进程受信通道（摘要校验 / 不透明句柄 / 受保护数据对比）。
+  // 安装器会关闭当前 Hub；由用户退出后手动安装，避免丢失安装后校验进程。
   const doUpdate = async (release: ProjectReleaseInfo) => {
-    if (updateBusyRef.current || !release) return
-    updateBusyRef.current = true
     setUpdateError(null)
     try {
-      const result = await runUpdateFlow(release, {
-        listRunning: async () => {
-          const states = await api.listInstanceStates().catch(() => [])
-          const ids = new Set(store.instances.map(instance => instance.id))
-          return states
-            .filter(state => ids.has(state.instanceId) && ['ready', 'starting', 'paused', 'stopping'].includes(state.status))
-            .map(state => ({ id: state.instanceId, name: store.instances.find(instance => instance.id === state.instanceId)?.name }))
-        },
-        confirmStop: async instances => window.confirm(t('settings.about.updateStopConfirm', {
-          count: instances.length,
-          names: instances.map(instance => instance.name ?? instance.id).join('、'),
-        })),
-        stopInstance: async id => { await store.stopInstance(id) },
-        download: async releaseId => api.downloadProjectRelease(releaseId),
-        install: async artifactId => api.installProjectRelease(artifactId),
-        onStage: stage => { setUpdateStage(stage) },
-      })
-      if (result.stage === 'restart-pending' || result.stage === 'done') {
-        // 安装完成：延迟重启（15 秒倒计时，可立即重启或稍后）。
-        setRestartCountdown(15)
-      } else if (result.stage === 'cancelled') {
-        store.showToast({ kind: 'error', message: t('settings.about.updateCancelled') })
-        setUpdateInfo(null)
-      } else if (!result.ok) {
-        setUpdateError(result.error ?? t('settings.about.updateFailed'))
-        store.showToast({ kind: 'error', message: `${t('settings.about.updateFailed')}：${result.error ?? ''}` })
-      }
-    } finally {
-      updateBusyRef.current = false
+      await api.openExternal(release.pageUrl)
+    } catch (error) {
+      setUpdateError(error instanceof Error ? error.message : String(error))
     }
   }
 
-  // 启动时通过主进程受信通道检查项目发行版（设置读取后才检查/自动更新）；
+  // 启动时通过主进程受信通道检查项目发行版；自动检查只提示，不执行安装。
   // 有更新则弹更新界面，叉掉后本次进程内不再显示。无发行版/网络失败静默
   // （手动检查入口在设置-关于，会给出如实提示）。
   useEffect(() => {
-    if (!store.settings || updateDismissedRef.current) return
+    if (!store.settings || store.settings.autoUpdate === false || updateDismissedRef.current) return
     let disposed = false
     void api.checkProjectRelease().then(result => {
       if (disposed || !result.release) return
       if (!isNewer(result.release, packageMetadata.version)) return
       setUpdateInfo(result.release)
-      if (store.settings?.autoUpdate !== false) void doUpdate(result.release)
     }).catch(() => undefined)
     return () => { disposed = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.settings])
-
-  // 延迟重启倒计时：到 0 调用主进程重启；弹窗关闭即取消定时器。
-  useEffect(() => {
-    if (restartCountdown === null) return
-    if (restartCountdown <= 0) { void api.restartApp(); return }
-    const timer = window.setTimeout(() => setRestartCountdown(count => (count === null ? null : count - 1)), 1000)
-    return () => window.clearTimeout(timer)
-  }, [restartCountdown])
 
   // 启动时只读发现上次未完成的创建任务；非空则弹恢复入口（确认清理由用户
   // 明确发起，主进程按任务所有权执行，见 UnfinishedCreatesDialog）。
@@ -374,10 +326,9 @@ function LauncherShell() {
           onSave={next => store.saveSettings(next)}
           onNotify={(kind, message) => store.showToast({ kind, message })}
           onUpdateAvailable={release => {
-            // 手动检查发现新版本 → 直接进入 App 层受信更新弹窗（含停止实例确认）。
+            // 手动检查发现新版本 → 显示发行页入口与手动安装说明。
             updateDismissedRef.current = false
             setUpdateInfo(release)
-            setUpdateStage(null)
             setUpdateError(null)
           }}
           onMinimize={minimizeWindow}
@@ -387,32 +338,20 @@ function LauncherShell() {
       )}
 
       {updateInfo && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.currentTarget === event.target && restartCountdown === null) dismissUpdate() }}>
+        <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.currentTarget === event.target) dismissUpdate() }}>
           <section className="modal update-dialog" role="dialog" aria-modal="true" aria-labelledby="update-title">
             <header>
               <div><h2 id="update-title">{t('settings.about.updateAvailable')}</h2></div>
-              {restartCountdown === null && <button type="button" className="icon-button" onClick={dismissUpdate} aria-label={t('common.close')}><X size={18} /></button>}
+              <button type="button" className="icon-button" onClick={dismissUpdate} aria-label={t('common.close')}><X size={18} /></button>
             </header>
             <div className="modal-content">
               <p className="about-update-time"><strong>{t('settings.about.version')}</strong> {updateInfo.version} · <strong>{t('settings.about.releaseTime')}</strong> {updateInfo.publishedAt.slice(0, 10)}</p>
               <p className="about-changelog">{updateInfo.notes}</p>
-              <p className="about-desc" role="status" aria-live="polite">
-                {updateStage === 'stopping' && t('settings.about.updateStopping')}
-                {updateStage === 'downloading' && t('settings.about.downloading')}
-                {updateStage === 'installing' && t('settings.about.updateInstalling')}
-                {updateStage === 'restart-pending' && t('settings.about.updateRestartPending', { seconds: restartCountdown ?? 0 })}
-              </p>
+              <p className="about-desc">{t('settings.about.manualUpdateHint')}</p>
               {updateError && <p className="about-desc" role="alert">{updateError}</p>}
               <div className="settings-inline-actions">
-                {restartCountdown !== null
-                  ? <>
-                    <button type="button" className="primary-command" onClick={restartNow}>{t('settings.about.updateRestartNow')}</button>
-                    <button type="button" className="secondary-button" onClick={() => { setRestartCountdown(null); dismissUpdate() }}>{t('settings.about.updateLater')}</button>
-                  </>
-                  : (updateStage === null || updateStage === 'available' || updateStage === 'cancelled' || updateStage === 'failed') && (
-                    <button type="button" className="primary-command" disabled={['stopping', 'downloading', 'installing'].includes(updateStage ?? '')} onClick={() => void doUpdate(updateInfo)}>{t('settings.about.downloadUpdate')}</button>
-                  )}
-                <button type="button" className="secondary-button" onClick={() => void api.openExternal(updateInfo.pageUrl)}>{t('settings.about.openRelease')}</button>
+                <button type="button" className="primary-command" onClick={() => void doUpdate(updateInfo)}>{t('settings.about.openRelease')}</button>
+                <button type="button" className="secondary-button" onClick={dismissUpdate}>{t('settings.about.updateLater')}</button>
               </div>
             </div>
           </section>

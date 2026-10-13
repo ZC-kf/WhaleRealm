@@ -20,12 +20,12 @@ scripts/lib/repair-pnpm-links.mjs 的 depPathToFilename 与 depPathToFilenameUne
 
 完整 MIT 授权文本保留于 [licenses/pnpm/LICENSE](licenses/pnpm/LICENSE)。该工具位于源码分发范围内，不能因 pnpm 属于构建工具而省略复制代码的许可。周边自有实现采用本项目许可。
 
-## 按需获取的运行体
+## 实例运行体（社区 r5 随包，其余按需获取）
 
 | 组件 | 许可与边界 |
 | --- | --- |
 | 官方 DeepSeek Harness 运行体 | 上游 MIT；实际依赖树保留各自许可；本项目补丁许可单独记录 |
-| 社区 deepseek-harness-desktop | 上游包含 MIT 及 Additional Terms — No Commercial Secondary Development；不能仅标注为纯 MIT。完整条款应随对应运行体的 source-notices 分发 |
+| 社区 deepseek-harness-desktop 0.21.0（托管 r5，随包） | 上游包含 MIT 及 Additional Terms — No Commercial Secondary Development；不能仅标注为纯 MIT。完整条款应随对应运行体的 source-notices 分发 |
 | Node.js 发行体 | Node.js 核心 MIT；捆绑组件许可以该发行体 LICENSE 为准 |
 | @deepseek-ai/dsh 及 npm 依赖 | 包及传递依赖各自许可；不得用主包 MIT 声明代替整个依赖树 |
 

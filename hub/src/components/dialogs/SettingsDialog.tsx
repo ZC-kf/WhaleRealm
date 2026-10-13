@@ -205,7 +205,7 @@ export function SettingsDialog({ settings, busy, initialSection, onClose, onSave
   }
 
   // 关于页：手动检查更新（主进程受信通道）。结果如实提示：
-  // 有更新上抛给 App 层受信更新流程弹窗（含停止实例确认）；无更新/无发行版/
+  // 有更新上抛给 App 层显示发行页入口和手动安装说明；无更新/无发行版/
   // 未配置/网络失败分别给准确文案。
   const checkUpdate = async () => {
     try {

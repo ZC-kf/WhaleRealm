@@ -63,3 +63,13 @@
 
 发布流程中的本机证据与临时产物位于被忽略的本地目录，不进入公开快照；公开文档不包含
 访问令牌、用户数据或私人日志。
+
+## 2026-10-13 发布检查补充 / Publication check
+
+发布前检查确认旧的进程内静默安装无法在 NSIS 结束 Hub 后完成数据复核与重启。本版已改为自动检查并提示、用户到 GitHub 下载并在退出应用后手动安装；主进程拒绝旧安装 IPC。未将无人值守更新标为已验证。
+
+The in-process silent updater could not complete verification/restart after NSIS terminated the Hub. This release checks and notifies only; users download and install after exiting the app. The old install IPC is disabled. Unattended updates are not claimed as verified.
+
+本轮源码发布包含中英 README、贡献与安全说明、问题模板；此前的 294 文件计数仅对应旧快照。NSIS 验证依赖本机可用的 7-Zip 来读取实际负载，ASAR/ZIP 解析由 Node 工具完成。
+
+The updated source includes bilingual READMEs and repository guidance. The earlier 294-file count refers to the previous snapshot. NSIS payload inspection requires an available 7-Zip tool; ASAR/ZIP parsing is implemented in Node.
